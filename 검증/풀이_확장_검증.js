@@ -1,5 +1,7 @@
 // 풀이 확장 기능의 관계 후보, 십이운성, 지장간 표시를 점검한다.
 const assert=require('node:assert/strict');
+const fs=require('node:fs');
+const path=require('node:path');
 const {calculate}=require('../engine');
 const {create}=require('../reading');
 
@@ -22,4 +24,9 @@ assert.equal(partialReading.twelve,null);
 assert.equal(partialReading.partial,true);
 assert.equal(partialReading.tenThemes.length,0);
 
-console.log('풀이 확장, 관계 완성·부분 조합, 지장간 및 시간 미상 처리 통과');
+const app=fs.readFileSync(path.join(__dirname,'..','app.js'),'utf8');
+const tocPosition=app.indexOf('${renderReadingToc(reading)}');
+const pillarsPosition=app.indexOf('<div class="pillars">${cards}</div>');
+assert.ok(tocPosition>=0&&pillarsPosition>tocPosition);
+
+console.log('풀이 확장, 상단 목차, 관계 완성·부분 조합, 지장간 및 시간 미상 처리 통과');

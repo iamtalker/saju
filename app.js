@@ -99,7 +99,7 @@ renderProfiles();
 form.addEventListener('input',()=>{syncForm();saveForm();});
 form.addEventListener('change',()=>{syncForm();saveForm();});
 
-function renderReading(data,reading){
+function renderReadingToc(reading){
   const toc=[
     ['reading-pillars','네 기둥의 자리와 십이운성',true],
     ['reading-day','나의 중심 · 일간',Boolean(reading.day)],
@@ -109,7 +109,9 @@ function renderReading(data,reading){
     ['reading-hidden','지장간 십성',Boolean(reading.day)],
     ['reading-relations','글자 사이의 관계',true]
   ].filter(item=>item[2]);
-  const tocHtml=`<nav class="reading-toc" aria-label="풀이 목차"><strong>목차</strong><ol>${toc.map(([id,label])=>`<li><a href="#${id}">${label}</a></li>`).join('')}</ol></nav>`;
+  return `<nav class="reading-toc" aria-label="풀이 목차"><strong>풀이 목차</strong><ol>${toc.map(([id,label])=>`<li><a href="#${id}">${label}</a></li>`).join('')}</ol></nav>`;
+}
+function renderReading(data,reading){
   const pillarGuide=[0,1,2,3].map(i=>{
     const p=data.pillars[i];
     return p?`<div class="theme"><b>${pillarNames[i]} · ${reading.pillarGuides[i]}</b><small>${reading.twelve?`십이운성 ${reading.twelve[i]}`:'일간 미상으로 십이운성 미산출'}</small></div>`:`<div class="theme"><b>${pillarNames[i]} · 미상</b><small>확정된 기둥이 없어 풀이에서 제외합니다.</small></div>`;
@@ -124,7 +126,7 @@ function renderReading(data,reading){
   const hiddenCard=reading.day?`<article id="reading-hidden" class="reading-card"><span>지지 안에 숨은 천간 · 지장간 십성</span><h3>겉글자 아래 함께 보는 주제</h3>${hiddenThemes}<p class="reading-note">지장간의 배열만 표시합니다. 계절에 따른 사령·가중치와 작용력은 적용하지 않았습니다.</p></article>`:'';
   const relations=data.relations.length?data.relations.map(r=>`${r.positions}의 ${r.characters} ${r.name}${r.element?`(${r.element})`:''}${r.complete===false?` 부분 조합이며 ${r.missing.join('·')}이 빠져 있습니다`:''}`).join('. ')+'.':'확정된 글자에서 표시 대상 관계가 발견되지 않았습니다.';
   const relationCard=`<article id="reading-relations" class="reading-card"><span>글자 사이의 관계</span><h3>합과 충 살펴보기</h3><p>${relations} 관계 후보를 찾았다는 사실만으로 합화나 실제 사건·길흉을 결정하지 않습니다.</p></article>`;
-  return `<section class="reading"><div class="section-label">03 · 사주 풀이</div><h2>나의 사주 읽어보기</h2><p class="reading-intro">전통 명리의 상징을 바탕으로 원국의 글자를 풀어봅니다. ${reading.partial?'확정된 기둥만 살펴본 부분 풀이입니다.':'태어난 시각까지 포함한 여덟 글자를 살펴봅니다.'}</p>${tocHtml}<article id="reading-pillars" class="reading-card"><span>네 기둥의 자리와 십이운성</span>${pillarGuide}<p class="reading-note">십이운성은 화토동궁, 양간 순행·음간 역행 기준입니다. 전통적 분류이며 실제 생애 사건을 뜻하지 않습니다.</p></article>${dayHtml}${elementCard}${seasonCard}${tenCard}${hiddenCard}${relationCard}<p class="reading-note">이 풀이는 전통 명리의 상징적 분류를 설명합니다. 실제 성격이나 미래를 확인해 주는 결과가 아니며, 지장간 가중치·신강·신약, 격국·용신, 대운을 종합한 전문 간명은 포함하지 않습니다.</p></section>`;
+  return `<section class="reading"><div class="section-label">03 · 사주 풀이</div><h2>나의 사주 읽어보기</h2><p class="reading-intro">전통 명리의 상징을 바탕으로 원국의 글자를 풀어봅니다. ${reading.partial?'확정된 기둥만 살펴본 부분 풀이입니다.':'태어난 시각까지 포함한 여덟 글자를 살펴봅니다.'}</p><article id="reading-pillars" class="reading-card"><span>네 기둥의 자리와 십이운성</span>${pillarGuide}<p class="reading-note">십이운성은 화토동궁, 양간 순행·음간 역행 기준입니다. 전통적 분류이며 실제 생애 사건을 뜻하지 않습니다.</p></article>${dayHtml}${elementCard}${seasonCard}${tenCard}${hiddenCard}${relationCard}<p class="reading-note">이 풀이는 전통 명리의 상징적 분류를 설명합니다. 실제 성격이나 미래를 확인해 주는 결과가 아니며, 지장간 가중치·신강·신약, 격국·용신, 대운을 종합한 전문 간명은 포함하지 않습니다.</p></section>`;
 }
 function renderMarkdown(data,reading){
   const lines=['# 사주 풀이','',`양력: ${data.solar}`,`음력: ${data.lunar}`,'','## 네 기둥','', '| 기둥 | 간지 | 십성 |','|---|---|---|'];
@@ -155,7 +157,7 @@ function renderResult(data,values,{persist=true}={}){
   const reading=SajuReading.create(data);
   const readingHtml=renderReading(data,reading);
   const markdown=renderMarkdown(data,reading);
-  result.innerHTML=`<div class="result-heading"><div><div class="section-label">02 · 나의 사주</div><h2>태어난 순간의 네 기둥</h2></div><button type="button" id="exportMarkdown" class="secondary-button">풀이를 Markdown으로 저장</button></div><p class="dates">양력 ${escapeHtml(data.solar)} <span>·</span> 음력 ${escapeHtml(data.lunar)}</p>${data.warning.map(w=>`<p class="notice">${escapeHtml(w)}</p>`).join('')}<div class="pillars">${cards}</div>${detail}${readingHtml}${day?`<details><summary>지장간과 십성 더 보기</summary><p>지장간은 지지에 배속하는 천간입니다. 괄호 안의 십성은 일간과의 관계입니다.</p><div class="hidden-list">${hidden}</div></details>`:''}<details><summary>글자 사이의 관계</summary><p>천간합·육합·충과 삼합·방합의 짝 또는 조합 후보를 표시합니다. 부분 조합은 후보이며, 합화나 길흉을 확정하지 않습니다. 미상인 기둥은 검사하지 않습니다.</p><div class="hidden-list">${data.relations.length?data.relations.map(r=>`<div>${r.name} · ${r.positions} (${r.characters})${r.element?` · ${r.element}`:''}${r.complete===false?` · 빠진 글자 ${r.missing.join('·')}`:''}</div>`).join(''):'확인된 관계가 없습니다.'}</div></details><details><summary>계산 기준과 한계</summary><p>절입 시각으로 연주와 월주를 정합니다. 출생 시각은 한국의 당시 표준시를 기준으로 하며, 1987~1988년 서머타임을 반영합니다. 일주와 시주는 입력한 보정 분을 표준시에서 빼 계산합니다. 30분은 근사값이며 출생지나 날짜에 따른 보정값을 자동 계산하지 않습니다.</p><p>일주는 ${data.boundary==='23'?'보정 시각의 밤 11시':'보정 시각의 자정'}를 기준으로 바뀝니다. ${data.standardTime?`당시 표준시: ${data.standardTime} · 보정된 시각: ${data.adjustedTime}${data.dst?' (서머타임 보정)':''}.`:''}</p><p>절기 경계의 초 단위는 자료에 따라 차이가 날 수 있습니다. 용신·대운은 아직 제공하지 않습니다.</p></details>`;
+  result.innerHTML=`<div class="result-heading"><div><div class="section-label">02 · 나의 사주</div><h2>태어난 순간의 네 기둥</h2></div><button type="button" id="exportMarkdown" class="secondary-button">풀이를 Markdown으로 저장</button></div><p class="dates">양력 ${escapeHtml(data.solar)} <span>·</span> 음력 ${escapeHtml(data.lunar)}</p>${data.warning.map(w=>`<p class="notice">${escapeHtml(w)}</p>`).join('')}${renderReadingToc(reading)}<div class="pillars">${cards}</div>${detail}${readingHtml}${day?`<details><summary>지장간과 십성 더 보기</summary><p>지장간은 지지에 배속하는 천간입니다. 괄호 안의 십성은 일간과의 관계입니다.</p><div class="hidden-list">${hidden}</div></details>`:''}<details><summary>글자 사이의 관계</summary><p>천간합·육합·충과 삼합·방합의 짝 또는 조합 후보를 표시합니다. 부분 조합은 후보이며, 합화나 길흉을 확정하지 않습니다. 미상인 기둥은 검사하지 않습니다.</p><div class="hidden-list">${data.relations.length?data.relations.map(r=>`<div>${r.name} · ${r.positions} (${r.characters})${r.element?` · ${r.element}`:''}${r.complete===false?` · 빠진 글자 ${r.missing.join('·')}`:''}</div>`).join(''):'확인된 관계가 없습니다.'}</div></details><details><summary>계산 기준과 한계</summary><p>절입 시각으로 연주와 월주를 정합니다. 출생 시각은 한국의 당시 표준시를 기준으로 하며, 1987~1988년 서머타임을 반영합니다. 일주와 시주는 입력한 보정 분을 표준시에서 빼 계산합니다. 30분은 근사값이며 출생지나 날짜에 따른 보정값을 자동 계산하지 않습니다.</p><p>일주는 ${data.boundary==='23'?'보정 시각의 밤 11시':'보정 시각의 자정'}를 기준으로 바뀝니다. ${data.standardTime?`당시 표준시: ${data.standardTime} · 보정된 시각: ${data.adjustedTime}${data.dst?' (서머타임 보정)':''}.`:''}</p><p>절기 경계의 초 단위는 자료에 따라 차이가 날 수 있습니다. 용신·대운은 아직 제공하지 않습니다.</p></details>`;
   result.querySelector('#exportMarkdown').addEventListener('click',()=>{
     const blob=new Blob([markdown],{type:'text/markdown;charset=utf-8'});
     const url=URL.createObjectURL(blob);
