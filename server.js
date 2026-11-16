@@ -34,4 +34,5 @@ const ownerWatch=setInterval(()=>{
   catch(error){if(error.code==='ESRCH')shutdown();}
 },1000);
 ownerWatch.unref();
+server.on('error',error=>{ if(error.code==='EADDRINUSE'){ console.error(`Port ${port} is already in use. Run 실행하기.cmd again to stop the old process and restart.`); process.exit(1); } throw error; });
 server.listen(port,'127.0.0.1',()=>console.log(`사주 프로그램: http://127.0.0.1:${port} · 종료하려면 Ctrl+C 또는 이 창을 닫으세요`));
