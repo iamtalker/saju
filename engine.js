@@ -109,7 +109,7 @@ function calculateCore(input) {
             const natalClashes=pillars.map((p,n)=>p&&p[1]===clashes[branch]?['연지','월지','일지','시지'][n]:null).filter(Boolean);
             return {pillar,branch,natalClashes,fromAgeMonths:fromMonths,toAgeMonths:toMonths,startDate:formatKst(startInstant+i*10*yearMs),endDate:formatKst(startInstant+(i+1)*10*yearMs)};
           });
-          daeun={available:true,direction:forward?'순행':'역행',sex:input.sex,yearStem:yearP[0],jie:jieNames[jie.getName()]||jie.getName(),startAgeMonths,comparison:{rounded:`${startYears}년`,monthCarry:`${Math.floor(carryMonths/12)}년${carryMonths%12?` ${carryMonths%12}개월`:''}`},startAge:`${Math.floor(startAgeMonths/12)}년${startAgeMonths%12?` ${startAgeMonths%12}개월`:''}`,startDate:formatKst(startInstant),cycles};
+          daeun={available:true,direction:forward?'순행':'역행',sex:input.sex,yearStem:yearP[0],jie:jieNames[jie.getName()]||jie.getName(),startAgeMonths,distanceDays:Math.round(distanceMs/86400000*10)/10,startYears,comparison:{rounded:`${startYears}년`,monthCarry:`${Math.floor(carryMonths/12)}년${carryMonths%12?` ${carryMonths%12}개월`:''}`},startAge:`${Math.floor(startAgeMonths/12)}년${startAgeMonths%12?` ${startAgeMonths%12}개월`:''}`,startDate:formatKst(startInstant),cycles};
         }
       }
     }
@@ -133,7 +133,8 @@ function calculateCore(input) {
   const addTen=n=>{ if(n) sipCounts[n]=(sipCounts[n]||0)+1; };
   pillars.forEach((p,i)=>{ if(!p) return; if(i!==2) addTen(describe(p,day[0]).stemTen); const h=describe(p,day[0]).hidden; addTen(h[h.length-1].ten); });
   const sipsinCount=Object.entries(sipCounts).map(([name,count])=>({name,count})).sort((a,b)=>b.count-a.count);
-  const monthlyFlow=Array.from({length:12},(_,i)=>{ const m=i+1; const gz=Solar.fromYmdHms(nowKst[0],m,15,12,0,0).getLunar().getMonthInGanZhiExact(); return {month:m,pillar:toKo(gz)}; });
+  const prevYearGz=toKo(Solar.fromYmdHms(nowKst[0]-1,6,1,12,0,0).getLunar().getYearInGanZhi());
+  const monthlyFlow=Array.from({length:12},(_,i)=>{ const m=i+1; const gz=Solar.fromYmdHms(nowKst[0],m,15,12,0,0).getLunar().getMonthInGanZhiExact(); return {month:m,pillar:toKo(gz),note:m===1?`입춘 전이라 전년(${prevYearGz}년)에 속함`:''}; });
   const todayGz=Solar.fromYmdHms(nowKst[0],nowKst[1],nowKst[2],12,0,0).getLunar().getDayInGanZhi();
   const extras={animal:animals[branches.indexOf(yearP?yearP[1]:day[1])]||null, gongmang:gongmangOf(day), sipsinCount, monthlyFlow, year:nowKst[0], today:{date:`${nowKst[0]}-${String(nowKst[1]).padStart(2,'0')}-${String(nowKst[2]).padStart(2,'0')}`, pillar:toKo(todayGz)}};
   let trueSolar=null;

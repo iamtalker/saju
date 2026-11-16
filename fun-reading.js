@@ -111,7 +111,8 @@
       `일간의 강약은 ${verdict}입니다. 득령·득지·득세 가운데 ${a.strength.hits}개가 충족됩니다.`,
       `격국은 ${gg.name}이며, ${gg.exposed?'월지의 십성이 천간에 드러나 있습니다':'천간에는 드러나 있지 않습니다'}.`,
       a.status==='갈림'?'용신은 하나로 정하지 않습니다.':`용신은 ${yongEl}이고, 희신은 ${a.bu.희}, 기신은 ${a.bu.기.join('·')}입니다.`,
-      a.note||''
+      a.note||'',
+      a.jong.wealth?`이 풀이의 대운·세운·월운은 정격(용신 ${yongEl||'없음'}) 기준이며, 종재격은 참고 견해입니다.`:''
     ].filter(Boolean);
     if(a.jong.wealth) summaryParts.push('재성이 많은데 일간이 약해 재성을 감당하는 것이 이 명식의 핵심 과제입니다.');
     const summary=summaryParts.join(' ');
@@ -208,6 +209,8 @@
       return [s1,...notes,rootNote,storeText,concl+(c.gm?' 지지가 공망이라 기운이 비는 자리입니다.':'')].filter(Boolean).join(' ');
     };
     const cycleLines=a.cycles.map(cycleText);
+    const dy=data.daeun||{};
+    const daeunTitle=dy.available?`대운 · ${dy.sex==='male'?'남성':'여성'} · ${dy.direction} · ${dy.direction==='역행'?'직전':'다음'} 절입까지 ${dy.distanceDays}일 ÷ 3 = ${(dy.distanceDays/3).toFixed(1)} → 만 ${dy.startYears}세 시작`:'대운';
     const nowAge=Number(data.extras.year)-parseInt(String(data.solar).split('년')[0],10);
     const cur=a.cycles.find(c=>nowAge>=c.fromAge&&nowAge<=c.toAge);
     const curText=cur?`현재 대운: ${cycleText(cur)}`:(a.cycles.length?'현재 나이에 해당하는 대운이 없습니다.':'성별을 선택하면 대운을 계산합니다.');
@@ -225,7 +228,7 @@
     // 월운
     const KOHS_R={갑:'甲',을:'乙',병:'丙',정:'丁',무:'戊',기:'己',경:'庚',신:'辛',임:'壬',계:'癸'};
     const KOBR_R={자:'子',축:'丑',인:'寅',묘:'卯',진:'辰',사:'巳',오:'午',미:'未',신:'申',유:'酉',술:'戌',해:'亥'};
-    const monthLines=a.months.map(m=>`${m.month}월 ${m.pillar}: 천간 ${KOS2[m.pillar[0]]||m.pillar[0]} ${judgeText(m.stem)}, 지지 ${m.pillar[1]} ${judgeText(m.branch)}.${m.rels.length?' '+relNotes(m.rels,KOHS_R[m.pillar[0]],KOBR_R[m.pillar[1]]).join(' '):''}${m.gm?' 공망입니다.':''} (점수 ${m.score>0?'+':''}${m.score}). ${m.level}.`);
+    const monthLines=a.months.map(m=>`${m.month}월 ${m.pillar}: 천간 ${KOS2[m.pillar[0]]||m.pillar[0]} ${judgeText(m.stem)}, 지지 ${m.pillar[1]} ${judgeText(m.branch)}.${m.note?' '+m.note+'.':''}${m.rels.length?' '+relNotes(m.rels,KOHS_R[m.pillar[0]],KOBR_R[m.pillar[1]]).join(' '):''}${m.gm?' 공망입니다.':''} (점수 ${m.score>0?'+':''}${m.score}). ${m.level}.`);
     const goodMonths=a.months.filter(m=>m.good).map(m=>`${m.month}월`).join(' · ');
     // 원국 관계와 신살, 공망
     const natalLines=[];
@@ -246,7 +249,7 @@
       + SECTION('원국 관계', natalLines.length?natalLines.join(' · '):'형·파·해·원진·귀문·합·충 관계가 원국에 없습니다.')
       + SECTION('신살', sinsalLine+'. 12신살(년지 기준): '+twelveLine)
       + SECTION('공망', gongLine)
-      + SECTION('대운', cycleLines.map((l,i)=>`${i+1}. ${l}`).join('<br>')+'<br>'+curText)
+      + SECTION(daeunTitle, cycleLines.map((l,i)=>`${i+1}. ${l}`).join('<br>')+'<br>'+curText)
       + SECTION('세운', yearText||'세운 정보가 없습니다.')
       + SECTION(`월운 (${data.extras.year}년 기준 12달)`, monthLines.join('<br>')+`<br>좋은 달: ${goodMonths||'없음'}`)
       + `</article>`;
