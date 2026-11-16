@@ -17,7 +17,8 @@
     파:['子酉','丑辰','寅亥','卯午','巳申','未戌'],
     해:['子未','丑午','寅巳','卯辰','申亥','酉戌'],
     원진:['子未','丑午','寅酉','卯申','辰亥','巳戌'],
-    귀문:['子酉','丑午','寅未','卯申','辰巳','戌亥'],
+    귀문:['子酉','丑午','寅未','卯申','辰亥','巳戌'],
+    육합:['子丑','寅亥','卯戌','辰酉','巳申','午未'],
     형:['寅巳','巳申','申寅','丑戌','戌未','未丑','子卯','辰辰','午午','酉酉','亥亥']
   };
   function pairKind(a,b){
@@ -141,7 +142,7 @@
     // 지지 판정: 달·세운·대운의 지지가 원국 지지와 방합·삼합을 완성하면 그 합의 오행으로 본다.
     // 조후 용신이 화인 명식에서는 丑·辰을 희신으로 치지 않는다.
     const natalBranchList=r.pillars.filter(Boolean).map(p=>p.branch);
-    const COMBOS=[['亥','子','丑','수'],['寅','卯','辰','목'],['巳','午','未','화'],['申','酉','戌','금'],['申','子','辰','수'],['亥','卯','未','목'],['寅','午','戌','화'],['巳','酉','丑','금']];
+    const COMBOS=[['亥','子','丑','수','방합'],['寅','卯','辰','목','방합'],['巳','午','未','화','방합'],['申','酉','戌','금','방합'],['申','子','辰','수','삼합'],['亥','卯','未','목','삼합'],['寅','午','戌','화','삼합'],['巳','酉','丑','금','삼합']];
     const judgeBranch=b=>{
       for(const [x,y,z,el] of COMBOS){ const set=[x,y,z]; if(!set.includes(b)) continue; const others=set.filter(s=>s!==b); if(others.every(o=>natalBranchList.includes(o))) return judge(el); }
       const own=judge(BR_EL[b]);
@@ -149,22 +150,35 @@
       return own;
     };
 
+    const STEMPOS=['연간','월간','일간','시간'], BRPOS=['연지','월지','일지','시지'];
+    const SELF_X=['辰','午','酉','亥'];
+    const GM=gongmangBranches;
+    const relationsWith=(stemH,branchH)=>{
+      const out=[];
+      r.pillars.forEach((p,i)=>{ if(!p) return;
+        if(stemH&&STEM_HAP[stemH]===p.stem) out.push({kind:'천간합',pos:STEMPOS[i]});
+        if(branchH){ const ks=pairKind(branchH,p.branch); if(branchH===p.branch&&SELF_X.includes(branchH)) ks.push('자형'); ks.forEach(k=>out.push({kind:k,pos:BRPOS[i]})); }
+      });
+      if(branchH){ for(const [x,y,z,el,type] of COMBOS){ const set=[x,y,z]; if(!set.includes(branchH)) continue; const others=set.filter(s=>s!==branchH); if(others.every(o=>natalBranchList.includes(o))) out.push({kind:el+' '+type+' 완성',pos:''}); } }
+      return out;
+    };
+    const gmOf=b=>GM.includes(b);
     // 세운: 해마다 천간·지지 판정과 원국 관계
     const years=(r.yearCycles||[]).map(y=>{
       const pairs=[];
       r.pillars.forEach((p,i)=>{ if(!p) return; const ks=pairKind(y.branch,p.branch); if(ks.length) pairs.push({kinds:ks,pos:['연지','월지','일지','시지'][i]}); });
-      return {year:y.year,pillar:y.pillar,stem:judgeStem(y.pillar[0]),branch:judgeBranch(y.branch),pairs,stemHap:y.relations?y.relations.stemHap:[],hap:y.relations?y.relations.hap:[],self:y.relations?y.relations.self:[],natalPositions:y.natalPositions};
+      return {year:y.year,pillar:y.pillar,stem:judgeStem(y.pillar[0]),branch:judgeBranch(y.branch),pairs,rels:relationsWith(y.pillar[0],y.branch),gm:gmOf(y.branch),stemHap:y.relations?y.relations.stemHap:[],hap:y.relations?y.relations.hap:[],self:y.relations?y.relations.self:[],natalPositions:y.natalPositions};
     });
     // 대운
     const cycles=(r.daeun&&r.daeun.cycles)||[];
-    const cyclesJudged=cycles.map(c=>({pillar:c.pillar,fromAge:Math.floor(c.fromAgeMonths/12),toAge:Math.floor(c.toAgeMonths/12)-1,stem:judgeStem(c.pillar[0]),branch:judgeBranch(c.branch),natalClashes:c.natalClashes}));
+    const cyclesJudged=cycles.map(c=>({pillar:c.pillar,fromAge:Math.floor(c.fromAgeMonths/12),toAge:Math.floor(c.toAgeMonths/12)-1,stem:judgeStem(c.pillar[0]),branch:judgeBranch(c.branch),rels:relationsWith(c.pillar[0],c.branch),gm:gmOf(c.branch),natalClashes:c.natalClashes}));
     // 월운: 천간 가중치와 지지 가중치를 더한다. 용신 +2/+1, 희신 +1/+1, 기신 -2/-1
     const weight=(j,stemFlag)=>{ const s=stemFlag?{용신:2,희신:1,기신:-2,한신:0,중립:0,갈림:0}:{용신:1,희신:1,기신:-1,한신:0,중립:0,갈림:0}; return s[j]||0; };
     const KO_ST={갑:'甲',을:'乙',병:'丙',정:'丁',무:'戊',기:'己',경:'庚',신:'辛',임:'壬',계:'癸'};
-    const months=(r.extras&&r.extras.monthlyFlow||[]).map(m=>{ const st=judgeStem(KO_ST[m.pillar[0]]); const hb=Object.keys(KO_BR).find(k=>KO_BR[k]===m.pillar[1]); const br=judgeBranch(hb); let score=weight(st,true)+weight(br,false); const stemCat=category(STEM_EL[KO_ST[m.pillar[0]]],dayEl); if(verdict==='신약'&&(stemCat==='재성'||stemCat==='관성')) score-=1; return {month:m.month,pillar:m.pillar,stem:st,branch:br,score,good:score>=1}; });
+    const months=(r.extras&&r.extras.monthlyFlow||[]).map(m=>{ const st=judgeStem(KO_ST[m.pillar[0]]); const hb=Object.keys(KO_BR).find(k=>KO_BR[k]===m.pillar[1]); const br=judgeBranch(hb); let score=weight(st,true)+weight(br,false); const stemCat=category(STEM_EL[KO_ST[m.pillar[0]]],dayEl); if(verdict==='신약'&&(stemCat==='재성'||stemCat==='관성')) score-=1; const hbr=hb; const rels=relationsWith(KO_ST[m.pillar[0]],hbr); const chung=rels.filter(x=>x.kind==='충').length; score-=2*chung; const level=score>=1?'좋은 달':score===0?'보통':'주의'; return {month:m.month,pillar:m.pillar,stem:st,branch:br,score,good:score>=1,level,rels,chung,gm:gmOf(hbr)}; });
 
-    return {dayEl,strength,gyeokguk,season,johu,jong,bu,yong,status,note,natal:{relations,stemRel,twelve,gongmang,elCount,lacking,excess,sinsal},years,cycles:cyclesJudged,months,
-      criteria:{strength:'득령: 월지 본기가 비겁·인성. 득지: 일지 지장간에 비겁·인성이 있음. 득세: 천간 3개와 지지 본기 4개 중 비겁·인성이 3개 이상. 3개면 신강, 0개면 신약, 1~2개면 갈림.',johu:'亥·子·丑월은 火, 巳·午·未월은 水를 필요 오행으로 봅니다. 봄·가을은 따로 보지 않습니다.',yong:'신약이면 인성을 용신, 비겁을 희신으로 봅니다. 신강이면 식상을 용신, 재성을 희신으로 봅니다. 조후와 억부가 어긋나면 갈림입니다.',gi:'신약에서는 재성과 식상이 기신, 관성은 한신입니다. 신강에서는 인성과 비겁이 기신입니다.',month:'월운은 천간에 가중치 용신 +2, 희신 +1, 기신 -2, 지지에 용신 +1, 희신 +1, 기신 -1을 더합니다. 신약이면 천간이 재성·관성인 달은 추가로 -1을 합니다. 합계 1점 이상이면 좋은 달입니다.',relations:'형·파·해·원진·귀문은 지지 쌍의 표준 표로 식별합니다. 충은 지지 쌍의 충 표로 식별합니다.',shinsal:'천을귀인과 문창귀인, 양인살은 일간 기준, 백호살과 괴강살은 간지 기준, 12신살은 년지 삼합 기준입니다. 공망은 일주 기준입니다.',gyeok:'격은 월지 본기의 십성으로 정하고, 같은 십성이 천간에 드러나면 투출로 봅니다.'}};
+    return {dayEl,strength,gyeokguk,season,johu,jong,bu,yong,status,note,natal:{relations,stemRel,twelve,gongmang,gongmangBranches:GM.map(b=>({b,judge:judgeBranch(b)})),elCount,lacking,excess,sinsal},years,cycles:cyclesJudged,months,
+      criteria:{strength:'득령: 월지 본기가 비겁·인성. 득지: 일지 지장간에 비겁·인성이 있음. 득세: 천간 3개와 지지 본기 4개 중 비겁·인성이 3개 이상. 3개면 신강, 0개면 신약, 1~2개면 갈림.',johu:'亥·子·丑월은 火, 巳·午·未월은 水를 필요 오행으로 봅니다. 봄·가을은 따로 보지 않습니다.',yong:'신약이면 인성을 용신, 비겁을 희신으로 봅니다. 신강이면 식상을 용신, 재성을 희신으로 봅니다. 조후와 억부가 어긋나면 갈림입니다.',gi:'신약에서는 재성과 식상이 기신, 관성은 한신입니다. 신강에서는 인성과 비겁이 기신입니다.',month:'월운은 천간에 가중치 용신 +2, 희신 +1, 기신 -2, 지지에 용신 +1, 희신 +1, 기신 -1을 더합니다. 신약이면 천간이 재성·관성인 달은 추가로 -1, 원국 지지와 충이 있으면 충 하나마다 -2를 합니다. 합계 1점 이상이면 좋은 달, 0점이면 보통, 음수이면 주의입니다.',relations:'세운·대운·월운의 지지와 천간을 원국 네 기둥과 대조합니다. 천간합, 지지 충·육합·형·파·해·원진·귀문·자형을 식별하고, 방합·삼합은 원국 지지와 합쳐 완성되는 경우만 봅니다. 귀문은 子酉·丑午·寅未·卯申·辰亥·巳戌 여섯 쌍입니다.',shinsal:'천을귀인과 문창귀인, 양인살은 일간 기준, 백호살과 괴강살은 간지 기준, 12신살은 년지 삼합 기준입니다. 공망은 일주 기준입니다.',gongmang:'공망은 일주 기준으로 午·未 같은 두 지지를 구하고, 그 지지가 용신·희신·기신 중 무엇인지 적습니다. 세운·대운·월운의 지지가 공망 지지이면 공망으로 표시합니다.',gyeok:'격은 월지 본기의 십성으로 정하고, 같은 십성이 천간에 드러나면 투출로 봅니다.'}};
   }
   function branchOrder(b){ return '子丑寅卯辰巳午未申酉戌亥'.indexOf(b); }
   return {analyze, PAIRS, pairKind};

@@ -104,19 +104,22 @@
     const loveText=`${LOVE_BY_JIJI[jiji]||''}${dayBranchTen?` ${SPOUSE_TEN[dayBranchTen]||''}`:''}${(data.shinsal||[]).some(s=>s.name==='도화살')?' 원국에 도화 표식이 있어 이성의 관심을 받기 쉽습니다.':''}`;
     // 건강
     const healthText=(excess.length||lacking.length)?`${excess.length?`${excess.join('·')} 기운이 많아 ${excess.map(e=>ORGAN[e]).join('·')}을 살필 필요가 있습니다.`:''}${lacking.length?` ${lacking.join('·')} 기운이 없어 ${lacking.map(e=>ORGAN[e]).join('·')}의 기능이 약하기 쉽습니다.`:''}`.trim():'오행이 고르게 있어 특별히 치우친 부분이 드러나지 않습니다.';
-    // 대운
+    // 관계 문장: 같은 자리의 관계를 묶는다
+    const relText=(rels)=>{ const m=new Map(); rels.forEach(x=>{ const key=x.pos||'__'; if(!m.has(key)) m.set(key,[]); if(!m.get(key).includes(x.kind)) m.get(key).push(x.kind); }); return [...m.entries()].map(([pos,ks])=>pos==='__'?ks.join(', '):`${pos}${josa(pos,'과','와')} ${ks.join('·')}`).join(', '); };
+    const gmText=(flag)=>flag?' 공망입니다.':'';
+    const gmNote=a.natal.gongmangBranches.map(g=>`${KOB[g.b]}(${g.b})는 ${g.judge}`).join(', ');
     const cycleLines=a.cycles.map(c=>{
-      const r=c.natalClashes&&c.natalClashes.length?` 원국 ${c.natalClashes.join('·')}와 충이 있습니다.`:'';
-      return `${c.pillar} (만 ${c.fromAge}~${c.toAge}세): 천간 ${stemLabel(c.pillar[0])}${josa(KOS[c.pillar[0]],'은','는')} ${judgeText(c.stem)}, 지지 ${branchLabel(c.pillar[1])}${josa(KOB[c.pillar[1]],'은','는')} ${judgeText(c.branch)}입니다.${r}`;
+      const rel=relText(c.rels);
+      return `${c.pillar} (만 ${c.fromAge}~${c.toAge}세): 천간 ${stemLabel(c.pillar[0])}${josa(KOS[c.pillar[0]],'은','는')} ${judgeText(c.stem)}, 지지 ${branchLabel(c.pillar[1])}${josa(KOB[c.pillar[1]],'은','는')} ${judgeText(c.branch)}입니다.${rel?' 원국과의 관계: '+rel+'.':' 원국과 충·합·형 관계가 없습니다.'}${gmText(c.gm)}`;
     });
     const nowAge=Number(data.extras.year)-parseInt(String(data.solar).split('년')[0],10);
     const cur=a.cycles.find(c=>nowAge>=c.fromAge&&nowAge<=c.toAge);
     const curText=cur?`현재 대운은 ${cur.pillar}(만 ${cur.fromAge}~${cur.toAge}세)입니다. 천간 ${stemLabel(cur.pillar[0])}${josa(KOS[cur.pillar[0]],'은','는')} ${judgeText(cur.stem)}, 지지 ${branchLabel(cur.pillar[1])}${josa(KOB[cur.pillar[1]],'은','는')} ${judgeText(cur.branch)}입니다.`:'현재 나이에 해당하는 대운이 없습니다.';
     // 세운
-    const yearLine=(y)=>{ const rel=[]; if(y.pairs.length) rel.push(...y.pairs.map(p=>`${p.pos}와 ${p.kinds.join('·')}`)); if(y.self&&y.self.length) rel.push(...y.self.map(p=>`${p}와 자형`)); if(y.stemHap&&y.stemHap.length) rel.push(...y.stemHap.map(p=>`${p}${josa(p,'과','와')} 천간합`)); return `${y.year}년 ${y.pillar}: 천간 ${stemLabel(y.pillar[0])}${josa(KOS[y.pillar[0]],'은','는')} ${judgeText(y.stem)}, 지지 ${branchLabel(y.pillar[1])}${josa(KOB[y.pillar[1]],'은','는')} ${judgeText(y.branch)}입니다. ${rel.length?'원국 '+rel.join(', ')+' 관계가 있습니다.':'원국과 충·합·형 관계가 없습니다.'}`; };
+    const yearLine=(y)=>{ const rel=relText(y.rels); return `${y.year}년 ${y.pillar}: 천간 ${stemLabel(y.pillar[0])}${josa(KOS[y.pillar[0]],'은','는')} ${judgeText(y.stem)}, 지지 ${branchLabel(y.pillar[1])}${josa(KOB[y.pillar[1]],'은','는')} ${judgeText(y.branch)}입니다.${rel?' 원국과의 관계: '+rel+'.':' 원국과 충·합·형 관계가 없습니다.'}${gmText(y.gm)}`; };
     const yearText=a.years.map(yearLine).join('<br>');
-    // 월운
-    const monthLines=a.months.map(m=>`${m.month}월 ${m.pillar}: 천간 ${KOS[m.pillar[0]]||m.pillar[0]} ${judgeText(m.stem)}, 지지 ${m.pillar[1]} ${judgeText(m.branch)} (점수 ${m.score>0?'+':''}${m.score}). ${m.good?'좋은 달':'보통 또는 주의하는 달'}.`);
+    // 월운: 등급 문구는 좋은 달, 보통, 주의로 나눈다
+    const monthLines=a.months.map(m=>`${m.month}월 ${m.pillar}: 천간 ${KOS[m.pillar[0]]||m.pillar[0]} ${judgeText(m.stem)}, 지지 ${m.pillar[1]} ${judgeText(m.branch)}.${m.rels.length?' 원국과의 관계: '+relText(m.rels)+'.':''}${m.gm?' 공망입니다.':''} (점수 ${m.score>0?'+':''}${m.score}). ${m.level}.`);
     const goodMonths=a.months.filter(m=>m.good).map(m=>`${m.month}월`).join(' · ');
     const section=(t,b)=>SECTION(t,b);
     const natalLines=[];
@@ -124,7 +127,7 @@
     if(a.natal.stemRel.length) natalLines.push(...a.natal.stemRel.map(x=>`${x.positions} ${x.characters} 천간합`));
     const sinsalLine=(a.natal.sinsal||[]).map(s=>`${s.name} ${s.positions}`).join(' · ')||'특수 신살은 없습니다';
     const twelveLine=(a.natal.twelve||[]).map(t=>`${t.pos} ${t.b} ${t.name}`).join(' · ');
-    const gongLine=(a.natal.gongmang||[]).map(g=>`${g.pos} ${g.b}: ${g.meaning}`).join(' · ')||'원국에 공망이 없습니다.';
+    const gongLine=(a.natal.gongmang||[]).length?`공망 지지는 ${gmNote}. 원국에 공망이 있습니다: ${(a.natal.gongmang||[]).map(g=>`${g.pos} ${g.b}, ${g.meaning}`).join(' · ')}.`:`공망 지지는 ${gmNote}. 원국에는 공망 지지가 없습니다. 세운·대운·월운의 지지가 이 자리에 오면 공망으로 표시합니다.`;
     return `<article id="reading-fun-all" class="reading-card"><span>풀이</span><h3>종합 총평</h3>`
       + section('종합 총평', summary)
       + section('성격', personality)
