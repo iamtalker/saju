@@ -14,18 +14,9 @@
   };
   const ELEM_OF={甲:'목',乙:'목',丙:'화',丁:'화',戊:'토',己:'토',庚:'금',辛:'금',壬:'수',癸:'수'};
   const ORGAN={목:'간과 담',화:'심장과 혈관',토:'위장과 비장',금:'폐와 대장',수:'신장과 방광'};
-  const TEN_TOPIC={
-    비견:'자기 주도와 독립',겁재:'경쟁과 자원 나눔',식신:'표현과 꾸준한 생산',상관:'새로운 관점과 말하기',
-    편재:'기회와 넓은 활동',정재:'계획과 안정적인 관리',편관:'도전과 압박 속 추진',정관:'질서와 책임',
-    편인:'독특한 탐구와 관점',정인:'배움과 지지'
-  };
-  const JOB={
-    식신:'기획, 창작, 교육, 콘텐츠 제작',상관:'기획, 홍보, 설계, 말과 글을 다루는 일',
-    편재:'영업, 무역, 투자 관련 업무, 사업',정재:'회계, 재무, 행정, 관리 업무',
-    편관:'위기관리, 법률, 무관, 현장 책임이 큰 일',정관:'공공 행정, 조직의 관리직, 규칙을 다루는 일',
-    편인:'연구, 분석, 기술, 독자적 전문직',정인:'교육, 연구, 상담, 지원 업무',
-    비견:'독립 사업, 전문직, 자기 브랜드를 세우는 일',겁재:'경쟁이 있는 영업과 승부가 있는 일'
-  };
+  const KOS={甲:'갑',乙:'을',丙:'병',丁:'정',戊:'무',己:'기',庚:'경',辛:'신',壬:'임',癸:'계'};
+  const HIDDEN={子:'壬癸',丑:'癸辛己',寅:'戊丙甲',卯:'甲乙',辰:'乙癸戊',巳:'戊庚丙',午:'丙己丁',未:'丁乙己',申:'戊壬庚',酉:'庚辛',戌:'辛丁戊',亥:'戊甲壬'};
+  const KOB={子:'자',丑:'축',寅:'인',卯:'묘',辰:'진',巳:'사',午:'오',未:'미',申:'신',酉:'유',戌:'술',亥:'해'};
   const LOVE_BY_JIJI={
     '자':'감정 표현이 조용하지만 깊은 편입니다.','축':'천천히 신뢰를 쌓는 편입니다.',
     '인':'호기심이 많고 먼저 움직이는 편입니다.','묘':'다정하게 챙기는 편입니다.',
@@ -34,113 +25,199 @@
     '신':'재치 있는 대화를 즐기는 편입니다.','유':'기준이 분명하고 깔끔한 편입니다.',
     '술':'의리를 중요하게 여기는 편입니다.','해':'마음을 열면 깊이 빠지는 편입니다.'
   };
-  const SPOUSE_TEN={
-    비견:'배우자 자리에 비겁이 있어 대등한 관계를 원하는 편입니다.',
-    겁재:'배우자 자리에 겁재가 있어 경쟁과 협력이 함께 있는 관계입니다.',
-    식신:'배우자 자리에 식신이 있어 편안하게 즐기는 관계를 찾는 편입니다.',
-    상관:'배우자 자리에 상관이 있어 말이 잘 통하는 관계를 중시합니다.',
-    편재:'배우자 자리에 편재가 있어 활동적인 상대와 맞는 편입니다.',
-    정재:'배우자 자리에 정재가 있어 현실적이고 성실한 상대와 맞습니다.',
-    편관:'배우자 자리에 편관이 있어 강하게 이끄는 상대에게 끌리는 편입니다.',
-    정관:'배우자 자리에 정관이 있어 책임감 있는 상대와 맞는 편입니다.',
-    편인:'배우자 자리에 편인이 있어 독특한 관점을 가진 상대와 맞는 편입니다.',
-    정인:'배우자 자리에 정인이 있어 돌봄과 지지를 주고받는 관계가 맞는 편입니다.'
+  // 십성 묶음별 강약 문장. 같은 십성이라도 신강·신약·갈림에 따라 뜻이 달라진다.
+  const GROUP_BY_STRENGTH={
+    비겁:{
+      신강:'자기 힘이 강해 독립심과 주도권이 큽니다. 경쟁을 피하지 않고 스스로 판단합니다.',
+      신약:'자기편을 세우는 힘이 약해 혼자 버티는 시간이 깁니다.',
+      갈림:'주도권을 쥘 때와 양보할 때가 상황에 따라 갈립니다.'
+    },
+    식상:{
+      신강:'표현하고 만들어 내는 힘이 강해 일을 만들고 말과 글로 드러내는 힘이 큽니다.',
+      신약:'표현하고 만들어 내는 힘은 큰데, 그것을 받아 쥘 힘이 약해 지치기 쉽습니다.',
+      갈림:'표현과 생산이 강점이 될 수도, 기운을 소모하는 일이 될 수도 있습니다.'
+    },
+    재성:{
+      신강:'재물과 일을 다루고 운용하는 힘이 있어 실제로 쌓아 가는 편입니다.',
+      신약:'일과 현실 문제는 많은데 감당이 과제입니다. 재물은 들어와도 쌓이기 어렵습니다.',
+      갈림:'재물과 일을 다루는 힘이 있으나 감당할 힘과 맞춰 봐야 합니다.'
+    },
+    관성:{
+      신강:'책임과 규율을 감당하는 힘이 있어 조직과 지위에서 자리를 잡습니다.',
+      신약:'압박과 책임이 무겁게 느껴지기 쉽습니다. 감당할 힘을 먼저 키워야 합니다.',
+      갈림:'책임을 맡을 수도, 피할 수도 있는 구간입니다.'
+    },
+    인성:{
+      신강:'배움과 생각이 깊어 스스로 공부하는 힘이 큽니다.',
+      신약:'배움과 도움이 힘이 되는 구조입니다. 인성이 받쳐 줄 때 버티는 힘이 생깁니다.',
+      갈림:'배움이 힘이 될 수도, 생각에만 머물 수도 있습니다.'
+    }
   };
-  const KOS={甲:'갑',乙:'을',丙:'병',丁:'정',戊:'무',己:'기',庚:'경',辛:'신',壬:'임',癸:'계'};
-  const KOB={子:'자',丑:'축',寅:'인',卯:'묘',辰:'진',巳:'사',午:'오',未:'미',申:'신',酉:'유',戌:'술',亥:'해'};
-  const josa=(word,b,p)=>{ const c=String(word).slice(-1).charCodeAt(0); const has=c>=0xAC00&&c<=0xD7A3&&(c-0xAC00)%28!==0; return has?b:p; };
-  const stemLabel=h=>`${KOS[h]}(${h})`;
-  const branchLabel=h=>`${KOB[h]}(${h})`;
+  // 없는 십성 문장
+  const MISSING={
+    인성:'인성이 없어 후원, 스승, 학력의 덕이 약하고 독학으로 익히는 편입니다.',
+    관성:'관성이 없어 조직, 지위, 윗사람과의 인연이 약하고 독립적으로 움직이는 편입니다.',
+    비겁:'비겁이 없어 자기편을 세우기 어렵고 협력자가 적은 편입니다.',
+    식상:'식상이 없어 표현과 생산의 통로가 약해 속으로 쌓아 두기 쉽습니다.',
+    재성:'재성이 없어 재물을 직접 다루는 힘이 약하고, 다른 경로로 얻는 편입니다.'
+  };
+  const GROUP_OF={비견:'비겁',겁재:'비겁',식신:'식상',상관:'식상',편재:'재성',정재:'재성',편관:'관성',정관:'관성',편인:'인성',정인:'인성'};
+  const JOB_BY_STRENGTH={
+    식상:'표현하고 만들어 내는 일, 기획과 콘텐츠, 연구 보조처럼 자기 결과물이 드러나는 일',
+    재성:'재물과 일을 직접 운용하는 일',
+    관성:'규칙과 책임이 분명한 조직 업무',
+    인성:'배우고 익힌 것을 가르치거나 분석하는 일',
+    비겁:'자기 영역을 세워 독자적으로 하는 일'
+  };
   const SECTION=(title,body)=>`<div class="theme"><b>${title}</b><p>${body}</p></div>`;
-  const EL_NAME={목:'목',화:'화',토:'토',금:'금',수:'수'};
+  const josa=(word,b,p)=>{ const c=String(word).slice(-1).charCodeAt(0); const has=c>=0xAC00&&c<=0xD7A3&&(c-0xAC00)%28!==0; return has?b:p; };
+  const KOS2={甲:'갑',乙:'을',丙:'병',丁:'정',戊:'무',己:'기',庚:'경',辛:'신',壬:'임',癸:'계'};
+  const stemLabel=h=>`${KOS2[h]}(${h})`;
+  const branchLabel=h=>`${KOB[h]}(${h})`;
+  const judgeText=j=>j==='용신'?'용신':j==='희신'?'희신':j==='기신'?'기신':j==='한신'?'한신':j==='갈림'?'갈림':'중립';
 
-  function sipsinCount(data){
-    const c={};
-    const add=n=>{ if(n) c[n]=(c[n]||0)+1; };
+  function groupCounts(data){
+    const g={비겁:0,식상:0,재성:0,관성:0,인성:0};
+    const ten={};
+    const add=n=>{ if(n){ ten[n]=(ten[n]||0)+1; g[GROUP_OF[n]]++; } };
     data.pillars.forEach((p,i)=>{ if(!p) return; if(i!==2) add(p.stemTen); const h=p.hidden; if(h&&h.length) add(h[h.length-1].ten); });
-    return c;
+    return {g,ten};
   }
-  function judgeText(j){ return j==='용신'?'용신':j==='희신'?'희신':j==='기신'?'기신':j==='한신'?'한신':j==='갈림'?'갈림':'중립'; }
+  // 관계 문장: 같은 자리의 관계를 묶는다
+  function relText(rels){
+    const m=new Map();
+    rels.forEach(x=>{ const key=x.pos||'__'; if(!m.has(key)) m.set(key,[]); if(!m.get(key).includes(x.kind)) m.get(key).push(x.kind); });
+    return [...m.entries()].map(([pos,ks])=>pos==='__'?ks.join(', '):`${pos}${josa(pos,'과','와')} ${ks.join('·')}`).join(', ');
+  }
 
   function build(data){
     const a=data.analysis;
     const day=data.pillars[2];
     if(!day||!a) return '';
     const dayChar=day.stem, dayEl=ELEM_OF[dayChar];
-    const cnt=sipsinCount(data);
-    const top=Object.entries(cnt).sort((x,y)=>y[1]-x[1]);
-    const strongTen=top.filter(([,n])=>n>=2).map(([k])=>k);
-    const missingTen=['비견','겁재','식신','상관','편재','정재','편관','정관','편인','정인'].filter(k=>!cnt[k]);
-    const wealth=(cnt['편재']||0)+(cnt['정재']||0);
-    const officer=(cnt['편관']||0)+(cnt['정관']||0);
-    const output=(cnt['식신']||0)+(cnt['상관']||0);
+    const {g,ten}=groupCounts(data);
     const verdict=a.strength.verdict;
-    const yongText=a.status==='갈림'?'용신을 하나로 정하지 않습니다':`용신은 ${a.yong}이고, 희신은 ${a.bu.희}, 기신은 ${a.bu.기.join('·')}입니다`;
+    const V=verdict==='신강'||verdict==='신약'?verdict:'갈림';
     const gg=a.gyeokguk;
-    const seasonText=`${a.season}에 태어났습니다`;
     const excess=a.natal.excess, lacking=a.natal.lacking;
-    const excessText=excess.length?`${excess.join('·')}${josa(excess.join('·'),'이','가')} 많고`:'';
-    const lackText=lacking.length?`${lacking.join('·')}${josa(lacking.join('·'),'이','가')} 없습니다`:'';
-    // 종합 총평
-    const summary=[
-      `일간은 ${dayChar}(${dayEl})이고, ${seasonText}. ${DAY_TRAIT[dayChar]}`,
+    const yongEl=a.yong;
+    const yongInNatal=data.pillars.some(p=>p&&(ELEM_OF[p.stem]===yongEl||(p.branchElement===yongEl)));
+    // 종합 총평: 구조를 한 문장으로 먼저 요약한다
+    const surround=excess.filter(e=>e!==dayEl).slice(0,2).join('·');
+    const seasonWord=a.season==='겨울'?'한겨울':a.season;
+    const structure=`${seasonWord}에 태어나 ${surround?surround+' 기운에 둘러싸인 ':''}${verdict==='신약'?'약한 ':verdict==='신강'?'강한 ':''}${dayEl}(${dayChar})이고, ${g.식상>=2&&V==='신약'?'표현하고 만들어 내는 힘은 큰데 그것을 받아 쥘 힘이 약하며':V==='신강'?'스스로 힘을 쓸 수 있으며':'힘의 균형이 맞지 않으며'}${a.yong&&!yongInNatal?`, 필요한 ${yongEl}가 원국에 없습니다.`:'.'}`;
+    const summaryParts=[
+      structure,
       `일간의 강약은 ${verdict}입니다. 득령·득지·득세 가운데 ${a.strength.hits}개가 충족됩니다.`,
       `격국은 ${gg.name}이며, ${gg.exposed?'월지의 십성이 천간에 드러나 있습니다':'천간에는 드러나 있지 않습니다'}.`,
-      `${yongText}.`,
-      lackText||excessText?`${excessText?excessText+' ':''}${lackText?lackText+'.':''}`.trim():'오행은 고르게 분포합니다.',
-      a.jong.wealth?'재성이 많은데 일간이 약해 재성을 감당하는 것이 이 명식의 핵심 과제입니다.':a.jong.possible?'비겁과 인성이 지장간에만 있어 종격으로 보는 견해가 있습니다. 그 경우 용신이 반대가 됩니다.':'',
-      a.note?a.note:''
-    ].filter(Boolean).join(' ');
-    // 성격
-    const personality=`${DAY_TRAIT[dayChar]} 월지 십성은 ${gg.ten?TEN_TOPIC[gg.ten]:'미정'}${josa(gg.ten?TEN_TOPIC[gg.ten]:'미정','과','와')} 관련된 기운입니다.${strongTen.length?` 원국에 ${strongTen.map(k=>TEN_TOPIC[k]).join('·')} 기운이 두드러집니다.`:''}${missingTen.length>=6?' 드러난 십성이 적어 한 방향으로 쏠리기 쉽습니다.':''}`;
+      a.status==='갈림'?'용신은 하나로 정하지 않습니다.':`용신은 ${yongEl}이고, 희신은 ${a.bu.희}, 기신은 ${a.bu.기.join('·')}입니다.`,
+      a.note||''
+    ].filter(Boolean);
+    if(a.jong.wealth) summaryParts.push('재성이 많은데 일간이 약해 재성을 감당하는 것이 이 명식의 핵심 과제입니다.');
+    if(a.jong.possible) summaryParts.push('비겁과 인성이 지장간에만 있어 종격으로 보는 견해가 있습니다.');
+    const summary=summaryParts.join(' ');
+    // 성격: 일간, 강한 식상의 결, 없는 관성·인성으로 읽는다
+    const outputPolar=(ten['상관']||0)>=(ten['식신']||0)&&(ten['상관']||0)>0?'기존 방식을 따져 보고 스스로 다시 만드는 힘':'꾸준히 만들고 가꾸는 힘';
+    const personalityParts=[DAY_TRAIT[dayChar]];
+    if(g.식상>=2) personalityParts.push(`식상이 두드러져 ${outputPolar}이 강합니다.`);
+    if(g.관성===0&&g.인성===0) personalityParts.push('관성과 인성이 모두 없어 기존 체계에 기대기보다 독학으로 익히고 스스로 길을 만드는 독학형에 가깝습니다.');
+    personalityParts.push(GROUP_BY_STRENGTH[g.식상>=2?'식상':'비겁'][V]);
+    const personality=personalityParts.join(' ');
+    // 강한 십성과 없는 십성 문단
+    const strengthParts=[];
+    for(const k of ['식상','재성','관성','인성','비겁']){
+      if(g[k]>=2) strengthParts.push(`${k} ${g[k]}개: ${GROUP_BY_STRENGTH[k][V]}`);
+      else if(g[k]===1) strengthParts.push(`${k} 1개: ${GROUP_BY_STRENGTH[k][V]}`);
+    }
+    const missingParts=['인성','관성','비겁','식상','재성'].filter(k=>g[k]===0).map(k=>MISSING[k]);
+    const tenParts=[...strengthParts,...missingParts];
     // 재물
-    const wealthText=(wealth===0?'재성이 없어 재물은 직접 다루기보다 다른 경로로 얻는 편입니다.':`재성이 ${wealth}개 있습니다.`)+(a.strength.verdict==='신약'&&wealth>=3?' 일간이 약해 재성이 많으면 재물을 감당하기 어렵습니다. 재물을 얻으려면 인성과 비겁의 도움을 받아야 합니다.':verdict==='신강'&&wealth>=1?' 일간이 강해 재물을 다룰 힘이 있습니다.':'');
-    // 직업
-    const careerKeys=[gg.ten,...strongTen].filter(Boolean);
-    const careerText=`${[...new Set(careerKeys)].slice(0,3).map(k=>JOB[k]).filter(Boolean).join(', ')} 쪽이 적합합니다.${officer===0?' 관성이 없어 조직보다 독립적으로 움직이는 일이 맞습니다.':''}${output>=2?' 식상이 두드러져 표현과 기획에 강점이 있습니다.':''}`;
-    // 연애
+    const wealthText=(()=>{
+      if(g.재성===0) return MISSING.재성;
+      if(V==='신약'&&g.재성>=3) return '벌 길은 있으나 쌓이지 않고 지나갑니다. 재성이 많은데 일간이 약해 재물을 붙잡아 두기 어렵습니다. 재물을 얻으려면 인성과 비겁의 도움을 받아야 합니다.';
+      if(V==='신강') return '재물을 다루는 힘이 있어 쌓아 가는 편입니다.';
+      return '재성이 있으나 많지 않아 상황에 따라 달라집니다.';
+    })();
+    // 직업: 강한 십성, 없는 십성, 강약을 함께 본다. 십성 사전에서 직종을 꺼내지 않는다.
+    const jobPieces=[];
+    if(g.식상>=2) jobPieces.push(`${JOB_BY_STRENGTH.식상}이 맞는 편입니다`);
+    if(V==='신약') jobPieces.push('책임이 무거운 자리보다 자기 몫을 스스로 정하는 일이 맞습니다');
+    if(g.관성===0) jobPieces.push('조직의 직위보다 자기 영역에서 성과를 내는 구조입니다');
+    if(g.인성===0) jobPieces.push('도움을 받는 경로가 적어 혼자 익히고 버티는 힘이 필요합니다');
+    const careerText=jobPieces.length?jobPieces.join('. ')+'.':'강약과 십성 구성이 특정 방향으로 치우치지 않아 여러 방향이 열려 있습니다.';
+    // 연애: 배우자 자리의 십성과 강약을 함께 본다
     const jiji=day.hangul[1];
     const dayBranchTen=day.hidden&&day.hidden.length?day.hidden[day.hidden.length-1].ten:null;
-    const loveText=`${LOVE_BY_JIJI[jiji]||''}${dayBranchTen?` ${SPOUSE_TEN[dayBranchTen]||''}`:''}${(data.shinsal||[]).some(s=>s.name==='도화살')?' 원국에 도화 표식이 있어 이성의 관심을 받기 쉽습니다.':''}`;
+    const spouseGroup=dayBranchTen?GROUP_OF[dayBranchTen]:null;
+    const spouseText={
+      재성:(V==='신약'&&g.재성>=3)?' 배우자 자리에 재성이 있어 인연은 있으나, 재성이 많은 신약한 명식이라 관계를 감당하는 데 힘이 듭니다.':' 배우자 자리에 재성이 있어 현실적인 관계를 찾는 편입니다.',
+      관성:' 배우자 자리에 관성이 있어 책임과 질서를 갖춘 관계가 맞는 편입니다.',
+      인성:' 배우자 자리에 인성이 있어 돌봄과 지지를 주고받는 관계가 맞는 편입니다.',
+      식상:' 배우자 자리에 식상이 있어 말이 통하고 함께 만드는 관계가 맞는 편입니다.',
+      비겁:' 배우자 자리에 비겁이 있어 대등한 관계를 원하는 편입니다.'
+    }[spouseGroup]||'';
+    const loveText=`${LOVE_BY_JIJI[jiji]||''}${spouseText}${(data.shinsal||[]).some(s=>s.name==='도화살')?' 원국에 도화 표식도 보입니다.':''}`;
     // 건강
     const healthText=(excess.length||lacking.length)?`${excess.length?`${excess.join('·')} 기운이 많아 ${excess.map(e=>ORGAN[e]).join('·')}을 살필 필요가 있습니다.`:''}${lacking.length?` ${lacking.join('·')} 기운이 없어 ${lacking.map(e=>ORGAN[e]).join('·')}의 기능이 약하기 쉽습니다.`:''}`.trim():'오행이 고르게 있어 특별히 치우친 부분이 드러나지 않습니다.';
-    // 관계 문장: 같은 자리의 관계를 묶는다
-    const relText=(rels)=>{ const m=new Map(); rels.forEach(x=>{ const key=x.pos||'__'; if(!m.has(key)) m.set(key,[]); if(!m.get(key).includes(x.kind)) m.get(key).push(x.kind); }); return [...m.entries()].map(([pos,ks])=>pos==='__'?ks.join(', '):`${pos}${josa(pos,'과','와')} ${ks.join('·')}`).join(', '); };
-    const gmText=(flag)=>flag?' 공망입니다.':'';
-    const gmNote=a.natal.gongmangBranches.map(g=>`${KOB[g.b]}(${g.b})는 ${g.judge}`).join(', ');
-    const cycleLines=a.cycles.map(c=>{
-      const rel=relText(c.rels);
-      return `${c.pillar} (만 ${c.fromAge}~${c.toAge}세): 천간 ${stemLabel(c.pillar[0])}${josa(KOS[c.pillar[0]],'은','는')} ${judgeText(c.stem)}, 지지 ${branchLabel(c.pillar[1])}${josa(KOB[c.pillar[1]],'은','는')} ${judgeText(c.branch)}입니다.${rel?' 원국과의 관계: '+rel+'.':' 원국과 충·합·형 관계가 없습니다.'}${gmText(c.gm)}`;
-    });
+    // 대운: 줄마다 2~3문장
+    const cycleText=c=>{
+      const s1=`${c.pillar}(만 ${c.fromAge}~${c.toAge}세) 대운은 천간 ${stemLabel(c.pillar[0])}${josa(KOS2[c.pillar[0]],'은','는')} ${judgeText(c.stem)}, 지지 ${branchLabel(c.pillar[1])}${josa(KOB[c.pillar[1]],'은','는')} ${judgeText(c.branch)}입니다.`;
+      const stemBoundRel=c.rels.find(x=>x.kind==='천간합');
+      const stemBound=!!stemBoundRel;
+      const bits=[];
+      const POSIDX={연간:0,월간:1,일간:2,시간:3};
+      if(stemBound&&(c.stem==='용신'||c.stem==='희신')){ const partner=data.pillars[POSIDX[stemBoundRel.pos]]; bits.push(`천간 ${stemLabel(c.pillar[0])}${josa(KOS2[c.pillar[0]],'은','는')} 원국 ${stemBoundRel.pos}의 ${partner?KOS2[partner.stem]+'('+partner.stem+')':'글자'}${partner?josa(KOS2[partner.stem],'과','와'):'과'} 합으로 묶여 힘이 절반만 들어옵니다.`); }
+      const yongEl=a.yong;
+      const hid=(HIDDEN[c.pillar[1]]||'').split('').map(h=>({h,el:ELEM_OF[h]}));
+      if((c.stem==='희신'||c.stem==='용신'||c.branch==='희신'||c.branch==='용신')&&hid.some(h=>h.el===yongEl)&&!data.pillars.some(p=>p&&(p.stemElement===yongEl||p.branchElement===yongEl))) bits.push(`지지 ${branchLabel(c.pillar[1])} 속의 ${hid.find(h=>h.el===yongEl).h}(${yongEl})${josa(yongEl,'이','가')} 원국에 없던 기운을 들여옵니다.`);
+      if(c.rels.some(x=>x.kind==='충')) bits.push('지지는 원국과 충이 있어 그 자리의 기운이 흔들립니다.');
+      if(!bits.length&&c.rels.length) bits.push(`원국과 ${relText(c.rels)} 관계가 있어 그 자리에서 힘이 살아나거나 묶입니다.`);
+      if(!c.rels.length) bits.push('원국과 합·충·형 관계가 없어 힘이 그대로 들어옵니다.');
+      const s3=c.stem==='기신'&&c.branch==='기신'?'기신이 겹쳐 부담이 큰 시기입니다.':(c.stem==='용신'||c.stem==='희신')&&(c.branch==='용신'||c.branch==='희신')&&!stemBound?'용신과 희신이 함께 들어와 버팀이 되는 시기입니다.':(c.stem==='용신'||c.stem==='희신')&&c.branch==='기신'?'천간의 힘은 들어오지만 지지의 기신이 함께 있어 절반만 쓸 수 있는 시기입니다.':c.stem==='기신'?'기신 기운이 들어와 조심해야 하는 시기입니다.':'큰 힘이 두드러지지 않는 시기입니다.';
+      return [s1,bits.join(' '),s3+(c.gm?' 지지가 공망이라 기운이 비는 자리입니다.':'')].filter(Boolean).join(' ');
+    };
+    const cycleLines=a.cycles.map(cycleText);
     const nowAge=Number(data.extras.year)-parseInt(String(data.solar).split('년')[0],10);
     const cur=a.cycles.find(c=>nowAge>=c.fromAge&&nowAge<=c.toAge);
-    const curText=cur?`현재 대운은 ${cur.pillar}(만 ${cur.fromAge}~${cur.toAge}세)입니다. 천간 ${stemLabel(cur.pillar[0])}${josa(KOS[cur.pillar[0]],'은','는')} ${judgeText(cur.stem)}, 지지 ${branchLabel(cur.pillar[1])}${josa(KOB[cur.pillar[1]],'은','는')} ${judgeText(cur.branch)}입니다.`:'현재 나이에 해당하는 대운이 없습니다.';
-    // 세운
-    const yearLine=(y)=>{ const rel=relText(y.rels); return `${y.year}년 ${y.pillar}: 천간 ${stemLabel(y.pillar[0])}${josa(KOS[y.pillar[0]],'은','는')} ${judgeText(y.stem)}, 지지 ${branchLabel(y.pillar[1])}${josa(KOB[y.pillar[1]],'은','는')} ${judgeText(y.branch)}입니다.${rel?' 원국과의 관계: '+rel+'.':' 원국과 충·합·형 관계가 없습니다.'}${gmText(y.gm)}`; };
-    const yearText=a.years.map(yearLine).join('<br>');
-    // 월운: 등급 문구는 좋은 달, 보통, 주의로 나눈다
-    const monthLines=a.months.map(m=>`${m.month}월 ${m.pillar}: 천간 ${KOS[m.pillar[0]]||m.pillar[0]} ${judgeText(m.stem)}, 지지 ${m.pillar[1]} ${judgeText(m.branch)}.${m.rels.length?' 원국과의 관계: '+relText(m.rels)+'.':''}${m.gm?' 공망입니다.':''} (점수 ${m.score>0?'+':''}${m.score}). ${m.level}.`);
+    const curText=cur?`현재 대운: ${cycleText(cur)}`:'현재 나이에 해당하는 대운이 없습니다.';
+    // 세운: 올해와 내년은 문단, 나머지는 한두 문장
+    const yearLine=(y)=>{ const rel=relText(y.rels); return `${y.year}년 ${y.pillar}: 천간 ${stemLabel(y.pillar[0])}${josa(KOS2[y.pillar[0]],'은','는')} ${judgeText(y.stem)}, 지지 ${branchLabel(y.pillar[1])}${josa(KOB[y.pillar[1]],'은','는')} ${judgeText(y.branch)}입니다.${rel?' 원국과의 관계: '+rel+'.':' 원국과 충·합·형 관계가 없습니다.'}${y.gm?' 지지가 공망입니다.':''}`; };
+    const nowYear=Number(data.extras.year);
+    const yNow=a.years.find(y=>y.year===nowYear), yNext=a.years.find(y=>y.year===nowYear+1);
+    const yearDetail=[yNow,yNext].filter(Boolean).map(y=>{
+      const parts=[yearLine(y)];
+      if(y.stem==='용신'||y.stem==='희신') parts.push('천간이 용신이나 희신이라 드러나는 힘이 원국에 도움이 됩니다.');
+      if(y.branch==='기신'||y.stem==='기신') parts.push('기신이 들어와 부담이 커지는 해입니다.');
+      if(y.rels.some(x=>x.kind==='충')) parts.push('원국과 충이 있어 그 자리의 일정과 관계가 흔들리기 쉽습니다.');
+      return parts.join(' ');
+    }).join('<br>');
+    const yearRest=a.years.filter(y=>y!==yNow&&y!==yNext).map(y=>{ const rel=relText(y.rels); return `${y.year}년 ${y.pillar}: ${judgeText(y.stem)}·${judgeText(y.branch)}${rel?', 원국과 '+rel:''}${y.gm?', 공망':''}.`; }).join('<br>');
+    const yearText=yearDetail+(yearRest?'<br>'+yearRest:'');
+    // 월운
+    const monthLines=a.months.map(m=>`${m.month}월 ${m.pillar}: 천간 ${KOS2[m.pillar[0]]||m.pillar[0]} ${judgeText(m.stem)}, 지지 ${m.pillar[1]} ${judgeText(m.branch)}.${m.rels.length?' 원국과의 관계: '+relText(m.rels)+'.':''}${m.gm?' 공망입니다.':''} (점수 ${m.score>0?'+':''}${m.score}). ${m.level}.`);
     const goodMonths=a.months.filter(m=>m.good).map(m=>`${m.month}월`).join(' · ');
-    const section=(t,b)=>SECTION(t,b);
+    // 원국 관계와 신살, 공망
     const natalLines=[];
     if(a.natal.relations.length) natalLines.push(...a.natal.relations.map(x=>`${x.positions} ${x.characters} ${x.kinds.join('·')}`));
     if(a.natal.stemRel.length) natalLines.push(...a.natal.stemRel.map(x=>`${x.positions} ${x.characters} 천간합`));
     const sinsalLine=(a.natal.sinsal||[]).map(s=>`${s.name} ${s.positions}`).join(' · ')||'특수 신살은 없습니다';
     const twelveLine=(a.natal.twelve||[]).map(t=>`${t.pos} ${t.b} ${t.name}`).join(' · ');
-    const gongLine=(a.natal.gongmang||[]).length?`공망 지지는 ${gmNote}. 원국에 공망이 있습니다: ${(a.natal.gongmang||[]).map(g=>`${g.pos} ${g.b}, ${g.meaning}`).join(' · ')}.`:`공망 지지는 ${gmNote}. 원국에는 공망 지지가 없습니다. 세운·대운·월운의 지지가 이 자리에 오면 공망으로 표시합니다.`;
+    const gmNote=a.natal.gongmangBranches.map(x=>`${KOB[x.b]}(${x.b})는 ${x.judge}`).join(', ');
+    const gongLine=(a.natal.gongmang||[]).length?`공망 지지는 ${gmNote}. 원국에 공망이 있습니다: ${(a.natal.gongmang||[]).map(x=>`${x.pos} ${x.b}, ${x.meaning}`).join(' · ')}.`:`공망 지지는 ${gmNote}. 원국에는 공망 지지가 없습니다. 세운·대운·월운의 지지가 이 자리에 오면 공망으로 표시합니다.`;
     return `<article id="reading-fun-all" class="reading-card"><span>풀이</span><h3>종합 총평</h3>`
-      + section('종합 총평', summary)
-      + section('성격', personality)
-      + section('재물', wealthText)
-      + section('직업·적성', careerText)
-      + section('연애·배우자', loveText)
-      + section('건강', healthText)
-      + section('원국 관계', natalLines.length?natalLines.join(' · '):'형·파·해·원진·귀문·합·충 관계가 원국에 없습니다.')
-      + section('신살', sinsalLine+'. 12신살(년지 기준): '+twelveLine)
-      + section('공망', gongLine)
-      + section('대운', cycleLines.join('<br>')+'<br>'+curText)
-      + section('세운', yearText||'세운 정보가 없습니다.')
-      + section('월운 (2026년 기준 12달)'.replace('2026년 기준',`${data.extras.year}년 기준`), monthLines.join('<br>')+`<br>좋은 달: ${goodMonths||'없음'}`)
+      + SECTION('종합 총평', summary)
+      + SECTION('성격', personality)
+      + SECTION('십성 해석 (강약 기준)', tenParts.join(' '))
+      + SECTION('재물', wealthText)
+      + SECTION('직업·적성', careerText)
+      + SECTION('연애·배우자', loveText)
+      + SECTION('건강', healthText)
+      + SECTION('원국 관계', natalLines.length?natalLines.join(' · '):'형·파·해·원진·귀문·합·충 관계가 원국에 없습니다.')
+      + SECTION('신살', sinsalLine+'. 12신살(년지 기준): '+twelveLine)
+      + SECTION('공망', gongLine)
+      + SECTION('대운', cycleLines.map((l,i)=>`${i+1}. ${l}`).join('<br>')+'<br>'+curText)
+      + SECTION('세운', yearText||'세운 정보가 없습니다.')
+      + SECTION(`월운 (${data.extras.year}년 기준 12달)`, monthLines.join('<br>')+`<br>좋은 달: ${goodMonths||'없음'}`)
       + `</article>`;
   }
   return {build};
