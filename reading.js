@@ -24,12 +24,28 @@
     '정인':['배움과 지원','배움과 도움, 보호와 지지를 주고받는 주제','도움을 받아들이는 일과 배운 것을 활용하는 일을 함께 살펴보세요.']
   };
   const elementText={목:'성장과 확장',화:'표현과 발산',토:'안정과 조정',금:'구분과 정리',수:'흐름과 탐색'};
+  const tenText={
+    비견:['독립성과 동료 의식','자기 기준을 세우고 비슷한 입장의 사람과 나란히 움직이는 주제'],겁재:['경쟁과 자원 나눔','협력과 경쟁 사이에서 역할과 경계를 조율하는 주제'],
+    식신:['꾸준한 표현과 생산','배운 것을 익혀 결과물로 만들고 나누는 주제'],상관:['새로운 관점과 표현','기존 방식에 질문하고 생각을 설득력 있게 전하는 주제'],
+    편재:['기회와 폭넓은 활동','여러 관계와 활동에서 자원과 기회를 다루는 주제'],정재:['계획과 안정적인 관리','현실적인 계획을 세우고 자원을 꾸준히 관리하는 주제'],
+    편관:['도전과 책임','긴장되는 과제를 맡고 추진하는 주제'],정관:['규칙과 사회적 역할','약속과 기준을 세우고 책임을 다하는 주제'],
+    편인:['탐구와 독특한 관점','관심 분야를 깊게 파고들며 다른 관점을 찾는 주제'],정인:['배움과 지원','지식과 도움을 주고받으며 기반을 다지는 주제']
+  };
+  const twelveNames=['장생','목욕','관대','건록','제왕','쇠','병','사','묘','절','태','양'];
+  const twelveStarts='亥午寅酉寅酉巳子申卯';
+  const branches='子丑寅卯辰巳午未申酉戌亥';
+  const pillarGuides=['태어난 해의 배경을 보는 자리','태어난 달과 계절 환경을 보는 자리','나를 나타내는 일간과 중심 관계를 보는 자리','태어난 시간과 이후의 관심사를 보는 자리'];
   function create(data){
     const pillars=data.pillars,day=pillars[2],known=pillars.filter(Boolean),counts=Object.fromEntries(Object.keys(elementText).map(x=>[x,0]));
     known.forEach(p=>{counts[p.stemElement]++;counts[p.branchElement]++;});
     const max=Math.max(...Object.values(counts)), prominent=Object.keys(counts).filter(k=>counts[k]===max&&max>0),missing=Object.keys(counts).filter(k=>counts[k]===0);
     const groups=new Map();pillars.forEach((p,i)=>{if(p&&i!==2&&day){if(!groups.has(p.stemTen))groups.set(p.stemTen,[]);groups.get(p.stemTen).push(['연간','월간','일간','시간'][i]);}});
-    return {day:day?{name:day.hangul[0],hanja:day.stem,element:day.stemElement,metaphor:stems[day.stem][0],image:stems[day.stem][1],theme:stems[day.stem][2]}:null,counts,knownCount:known.length*2,prominent,missing,elementText,tenThemes:[...groups].map(([name,positions])=>({name,positions,title:ten[name][0],meaning:ten[name][1],suggestion:ten[name][2]})),relations:data.relations,partial:known.length<4};
+    const hiddenGroups=new Map();
+    pillars.forEach((p,i)=>{if(!p||!day)return;p.hidden.forEach(h=>{if(!hiddenGroups.has(h.ten))hiddenGroups.set(h.ten,[]);const group=hiddenGroups.get(h.ten);let item=group.find(x=>x.position===['연주','월주','일주','시주'][i]);if(!item){item={position:['연주','월주','일주','시주'][i],characters:[]};group.push(item);}item.characters.push(`${h.hanja}(${h.hangul})`);});});
+    const month=pillars[1];
+    const dayIndex=day?'甲乙丙丁戊己庚辛壬癸'.indexOf(day.stem):-1;
+    const twelve=dayIndex<0?null:pillars.map(p=>{if(!p)return null;const start=branches.indexOf(twelveStarts[dayIndex]);const branch=branches.indexOf(p.branch);const step=dayIndex%2===0?branch-start:start-branch;return twelveNames[(step+12)%12];});
+    return {day:day?{name:day.hangul[0],hanja:day.stem,element:day.stemElement,polarity:day.stemYin,metaphor:stems[day.stem][0],image:stems[day.stem][1],theme:stems[day.stem][2]}:null,season:month?{branch:month.hangul[1],element:month.branchElement,ten:month.hidden.map(x=>x.ten)}:null,pillarGuides,twelve,counts,knownCount:known.length*2,prominent,missing,elementText,tenThemes:[...groups].map(([name,positions])=>({name,positions,title:ten[name][0],meaning:ten[name][1],suggestion:ten[name][2]})),hiddenThemes:[...hiddenGroups].map(([name,positions])=>({name,title:tenText[name][0],meaning:tenText[name][1],positions})),relations:data.relations,partial:known.length<4};
   }
   return {create};
 });

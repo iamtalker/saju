@@ -62,7 +62,15 @@ function calculate(input) {
   if(unknown&&uncertainDay&&input.dayBoundary==='00') warning.push('시간 보정으로 일주가 바뀔 가능성이 있어 확정하지 않습니다.');
   const pillars=[yearP,monthP,uncertainDay?null:day,unknown?null:hourPillar];
   const rules=[['천간합','甲己 乙庚 丙辛 丁壬 戊癸',0],['지지 육합','子丑 寅亥 卯戌 辰酉 巳申 午未',1],['지지 충','子午 丑未 寅申 卯酉 辰戌 巳亥',1]];
-  const relations=[]; for(const [name,pairs,pos] of rules) for(let a=0;a<4;a++) for(let b=a+1;b<4;b++) if(pillars[a]&&pillars[b]&&pairs.split(' ').some(pair=>pair.includes(pillars[a][pos])&&pair.includes(pillars[b][pos])&&pillars[a][pos]!==pillars[b][pos])) relations.push({name,positions:['연주','월주','일주','시주'].filter((_,i)=>i===a||i===b).join('·'),characters:pillars[a][pos]+pillars[b][pos]});
+  const positions=['연주','월주','일주','시주'],relations=[];
+  for(const [name,pairs,pos] of rules) for(let a=0;a<4;a++) for(let b=a+1;b<4;b++) if(pillars[a]&&pillars[b]&&pairs.split(' ').some(pair=>pair.includes(pillars[a][pos])&&pair.includes(pillars[b][pos])&&pillars[a][pos]!==pillars[b][pos])) relations.push({name,positions:[positions[a],positions[b]].join('·'),characters:pillars[a][pos]+pillars[b][pos]});
+  const branchSets=[['지지 삼합','申子辰','수'],['지지 삼합','亥卯未','목'],['지지 삼합','寅午戌','화'],['지지 삼합','巳酉丑','금'],['지지 방합','亥子丑','수'],['지지 방합','寅卯辰','목'],['지지 방합','巳午未','화'],['지지 방합','申酉戌','금']];
+  for(const [name,set,element] of branchSets){
+    const found=[];for(let i=0;i<4;i++)if(pillars[i]&&set.includes(pillars[i][1]))found.push({i,branch:pillars[i][1]});
+    const unique=[...new Set(found.map(x=>x.branch))];if(unique.length<2)continue;
+    const present=[...set].filter(x=>unique.includes(x)),missing=[...set].filter(x=>!unique.includes(x));
+    relations.push({name,positions:found.filter(x=>present.includes(x.branch)).map(x=>positions[x.i]).join('·'),characters:present.join(''),element,complete:missing.length===0,missing});
+  }
   const fmt=x=>`${x.getUTCFullYear()}-${String(x.getUTCMonth()+1).padStart(2,'0')}-${String(x.getUTCDate()).padStart(2,'0')} ${String(x.getUTCHours()).padStart(2,'0')}:${String(x.getUTCMinutes()).padStart(2,'0')}`;
   return { solar:`${y}년 ${m}월 ${d}일`, lunar:`${lunar.year}년 ${lunar.isLeapMonth?'윤':''}${lunar.month}월 ${lunar.day}일`, pillars:pillars.map(p=>p?describe(p,day[0]):null), relations, warning, standardTime:unknown?null:fmt(standard), adjustedTime:unknown?null:fmt(adjusted), correction, dst:!unknown && (standard.getUTCHours()!==hm[0] || standard.getUTCDate()!==d), boundary:input.dayBoundary };
 }
