@@ -1,0 +1,6 @@
+{
+  "dependencies": {
+    "kor-lunar": "^1.7.0",
+    "lunar-javascript": "^1.7.8"
+  }
+}
