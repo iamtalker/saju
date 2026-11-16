@@ -8,7 +8,7 @@ const savedProfiles=document.querySelector('#savedProfiles');
 const storageKey='saju.birth-form.v1';
 const profilesKey='saju.saved-profiles.v1';
 const lastResultKey='saju.last-result.v1';
-const fieldIds=['year','month','day','time','correction','boundary','profileName'];
+const fieldIds=['year','month','day','time','sex','correction','boundary','profileName'];
 const pillarNames=['연주','월주','일주','시주'];
 const pillarMeanings=['태어난 해','태어난 달','태어난 날','태어난 시간'];
 
@@ -20,6 +20,7 @@ function captureForm(){
     calendar:document.querySelector('[name=calendar]:checked').value,
     leap:document.querySelector('#leap').checked,
     time:time.value,
+    sex:document.querySelector('#sex').value,
     unknown:unknown.checked,
     correction:document.querySelector('#correction').value,
     dayBoundary:document.querySelector('#boundary').value
@@ -82,7 +83,7 @@ function saveProfile(values){
   renderProfiles();
 }
 function loadForm(values,name){
-  for(const id of ['year','month','day','time','correction','boundary']){
+  for(const id of ['year','month','day','time','sex','correction','boundary']){
     document.getElementById(id).value=values[id]??'';
   }
   document.querySelector(`[name=calendar][value=${values.calendar==='lunar'?'lunar':'solar'}]`).checked=true;
@@ -109,7 +110,8 @@ function renderReadingToc(reading){
     ['reading-hidden','지장간 십성',Boolean(reading.day)],
     ['reading-relations','글자 사이의 관계',true],
     ['reading-shinsal','신살 표식',true],
-    ['reading-years','앞으로 12년의 세운 관계',true]
+    ['reading-years','앞으로 12년의 세운 관계',true],
+    ['reading-daeun','대운 흐름',true]
   ].filter(item=>item[2]);
   return `<nav class="reading-toc" aria-label="풀이 목차"><strong>풀이 목차</strong><ol>${toc.map(([id,label])=>`<li><a href="#${id}">${label}</a></li>`).join('')}</ol></nav>`;
 }
@@ -133,8 +135,11 @@ function renderReading(data,reading){
   const positionTopics={연지:'주변 환경과 사회적 배경',월지:'일과 생활 환경',일지:'가까운 관계와 일상',시지:'개인 계획과 장기 목표'};
   const years=Array.isArray(data.yearCycles)?data.yearCycles.filter(y=>y.natalPositions.length):[];
   const yearItems=years.length?years.map(y=>`<div class="theme"><b>${y.year}년 · ${y.pillar}년 · 만 ${y.ageBeforeBirthday}~${y.ageAfterBirthday}세</b><small>${y.natalPositions.join('·')}와 지지 충</small><p>세운의 지지 ${y.branch}와 원국의 ${y.natalPositions.join('·')}가 충 관계입니다. 전통적인 자리 해석을 참고한다면 ${y.natalPositions.map(p=>positionTopics[p]).join('·')}에서 변화가 있을 때 일정과 대화를 여유 있게 점검해 볼 수 있습니다. 이 관계만으로 사건이 생긴다고 볼 수는 없습니다.</p></div>`).join(''):'앞으로 12년 동안 세운 지지가 원국 지지와 충을 이루는 해가 없습니다.';
-  const yearCard=`<article id="reading-years" class="reading-card"><span>세운의 지지와 원국의 충 관계</span><h3>앞으로 12년 중 점검해 볼 관계</h3>${yearItems}<p class="reading-note">나이는 해당 연도의 생일 전 만 나이부터 생일 후 만 나이까지입니다. 연도별 간지는 입춘 이후 기준으로 계산했습니다. 충은 전통적 관계 표식일 뿐 사고·질병·이별을 예고하지 않으며, 대운·월운·일진은 포함하지 않습니다.</p></article>`;
-  return `<section class="reading"><div class="section-label">03 · 사주 풀이</div><h2>나의 사주 읽어보기</h2><p class="reading-intro">전통 명리의 상징을 바탕으로 원국의 글자를 풀어봅니다. ${reading.partial?'확정된 기둥만 살펴본 부분 풀이입니다.':'태어난 시각까지 포함한 여덟 글자를 살펴봅니다.'}</p><article id="reading-pillars" class="reading-card"><span>네 기둥의 자리와 십이운성</span>${pillarGuide}<p class="reading-note">십이운성은 화토동궁, 양간 순행·음간 역행 기준입니다. 전통적 분류이며 실제 생애 사건을 뜻하지 않습니다.</p></article>${dayHtml}${elementCard}${seasonCard}${tenCard}${hiddenCard}${relationCard}${shinsalCard}${yearCard}<p class="reading-note">이 풀이는 전통 명리의 상징적 분류를 설명합니다. 실제 성격이나 미래를 확인해 주는 결과가 아니며, 지장간 가중치·신강·신약, 격국·용신, 대운을 종합한 전문 간명은 포함하지 않습니다.</p></section>`;
+  const yearCard=`<article id="reading-years" class="reading-card"><span>세운의 지지와 원국의 충 관계</span><h3>앞으로 12년 중 점검해 볼 관계</h3>${yearItems}<p class="reading-note">나이는 해당 연도의 생일 전 만 나이부터 생일 후 만 나이까지입니다. 연도별 간지는 입춘 이후 기준으로 계산했습니다. 충은 전통적 관계 표식일 뿐 사고·질병·이별을 예고하지 않으며, 이 표는 세운과 대운·월운·일진의 상호작용을 계산하지 않습니다.</p></article>`;
+  const daeun=data.daeun;
+  const daeunRows=daeun?.available?daeun.cycles.map((c,i)=>`<div class="theme"><b>${i+1}대운 · ${c.pillar}</b><small>만 ${Math.floor(c.fromAgeMonths/12)}년 ${c.fromAgeMonths%12}개월부터 ${Math.floor(c.toAgeMonths/12)}년 ${c.toAgeMonths%12}개월 전까지</small><p>시작일 약 ${c.startDate} · 다음 교체 시점 약 ${c.endDate}</p><p>${c.natalClashes.length?`대운 지지 ${c.branch}와 원국 ${c.natalClashes.join('·')}의 충 관계가 있습니다. ${c.natalClashes.map(p=>positionTopics[p]).join('·')}에서 변화가 있을 때 계획과 소통을 점검하는 참고로 볼 수 있습니다.`:'대운 지지와 원국 지지 사이에 충 표식은 없습니다.'}</p></div>`).join(''):'대운을 표시하려면 출생시간과 ‘대운 계산 기준 성별’을 입력해야 합니다.';
+  const daeunCard=`<article id="reading-daeun" class="reading-card"><span>월주에서 진행하는 10년 단위 간지</span><h3>대운 흐름</h3>${daeun?.available?`<p>${daeun.yearStem}년 · ${daeun.sex==='male'?'남성':'여성'} 기준 ${daeun.direction} · ${daeun.jie}까지의 간격으로 산출</p><p>첫 대운 시작 나이 약 ${daeun.startAge} · 시작일 약 ${daeun.startDate}</p>${daeunRows}`:`<p>${daeun?.reason||'출생시간과 순·역행 기준 성별을 입력해야 대운을 계산할 수 있습니다.'}</p>`}<p class="reading-note">방향은 양년 남성·음년 여성 순행, 음년 남성·양년 여성 역행 기준입니다. 절입까지의 실제 시간 차이를 3일=1년, 1일=4개월로 환산해 시작 나이는 개월 단위로 반올림합니다. 시작일은 반올림 전 시간 간격을 1년=365.2425일로 환산한 근삿값입니다. 학파·서비스마다 반올림과 교운 시각이 달라 결과가 다를 수 있습니다. 대운 간지와 시기만 표시하며, 길흉·직업·건강·사건을 예측하지 않습니다.</p></article>`;
+  return `<section class="reading"><div class="section-label">03 · 사주 풀이</div><h2>나의 사주 읽어보기</h2><p class="reading-intro">전통 명리의 상징을 바탕으로 원국의 글자를 풀어봅니다. ${reading.partial?'확정된 기둥만 살펴본 부분 풀이입니다.':'태어난 시각까지 포함한 여덟 글자를 살펴봅니다.'}</p><article id="reading-pillars" class="reading-card"><span>네 기둥의 자리와 십이운성</span>${pillarGuide}<p class="reading-note">십이운성은 화토동궁, 양간 순행·음간 역행 기준입니다. 전통적 분류이며 실제 생애 사건을 뜻하지 않습니다.</p></article>${dayHtml}${elementCard}${seasonCard}${tenCard}${hiddenCard}${relationCard}${shinsalCard}${yearCard}${daeunCard}<p class="reading-note">이 풀이는 전통 명리의 상징적 분류를 설명합니다. 실제 성격이나 미래를 확인해 주는 결과가 아니며, 지장간 가중치·신강·신약, 격국·용신에 따른 대운 길흉을 종합한 전문 간명은 포함하지 않습니다.</p></section>`;
 }
 function renderMarkdown(data,reading){
   const lines=['# 사주 풀이','',`양력: ${data.solar}`,`음력: ${data.lunar}`,'','## 네 기둥','', '| 기둥 | 간지 | 십성 |','|---|---|---|'];
@@ -153,7 +158,10 @@ function renderMarkdown(data,reading){
   lines.push('','## 신살 표식','',reading.shinsal.length?reading.shinsal.map(s=>`- **${s.name}**: ${s.matches.map(m=>`${m.기준} 기준 ${m.대상지지} (${m.위치.join('·')})`).join(' / ')} — ${s.meaning}`).join('\n'):'이 기준표에서 발견한 표식이 없습니다.');
   const years=(data.yearCycles||[]).filter(y=>y.natalPositions.length);
   lines.push('','## 앞으로 12년의 세운 관계','',years.length?years.map(y=>`- **${y.year}년 ${y.pillar}년 (만 ${y.ageBeforeBirthday}~${y.ageAfterBirthday}세)**: 세운 ${y.branch}와 원국 ${y.natalPositions.join('·')}의 지지 충`).join('\n'):'앞으로 12년 동안 원국 지지와 충을 이루는 세운이 없습니다.','', '세운의 충은 전통적 관계 표식이며 사고·질병·이별을 예고하지 않습니다. 대운·월운·일진은 포함하지 않습니다.');
-  lines.push('','## 계산 기준','',`- 출생시간 보정: ${data.correction}분`, `- 일주 경계: ${data.boundary==='23'?'밤 11시':'자정'}`,`- 십이운성: 화토동궁, 양간 순행·음간 역행`,`- 시간 미상 여부: ${data.pillars[3]?'아니요':'예'}`,'','이 결과는 전통 명리의 상징적 분류를 설명합니다. 실제 성격이나 미래를 입증하는 결과가 아니며, 강약·용신·대운 종합 해석은 포함하지 않습니다.','');
+  const daeun=data.daeun;
+  const daeunLines=daeun?.available?[`- 순역행: ${daeun.direction} (${daeun.yearStem}년 ${daeun.sex==='male'?'남성':'여성'} 기준)`,`- 첫 대운 시작: 약 ${daeun.startAge} · ${daeun.startDate}`,...daeun.cycles.map((c,i)=>`- ${i+1}대운 ${c.pillar}: 만 ${Math.floor(c.fromAgeMonths/12)}년 ${c.fromAgeMonths%12}개월부터 ${Math.floor(c.toAgeMonths/12)}년 ${c.toAgeMonths%12}개월 전까지 · 약 ${c.startDate}~${c.endDate}${c.natalClashes.length?` · 지지 ${c.branch}와 원국 ${c.natalClashes.join('·')} 충`:''}`)]:[`- ${daeun?.reason||'출생시간과 대운 계산 기준 성별이 필요합니다.'}`];
+  lines.push('','## 대운 흐름','',...daeunLines,'','순역행은 양년 남성·음년 여성 순행, 음년 남성·양년 여성 역행 기준입니다. 3일=1년, 1일=4개월로 환산하고 시작 나이는 개월 단위로 반올림합니다. 시작일은 반올림 전 시간 차이를 환산한 근삿값입니다. 대운 간지와 시기만 표시하며 길흉이나 실제 사건을 예측하지 않습니다.');
+  lines.push('','## 계산 기준','',`- 출생시간 보정: ${data.correction}분`, `- 일주 경계: ${data.boundary==='23'?'밤 11시':'자정'}`,`- 십이운성: 화토동궁, 양간 순행·음간 역행`,`- 시간 미상 여부: ${data.pillars[3]?'아니요':'예'}`,'','이 결과는 전통 명리의 상징적 분류를 설명합니다. 실제 성격이나 미래를 입증하는 결과가 아니며, 강약·격국·용신에 따른 종합 해석은 포함하지 않습니다.','');
   return lines.join('\n');
 }
 
@@ -168,7 +176,7 @@ function renderResult(data,values,{persist=true}={}){
   const reading=SajuReading.create(data);
   const readingHtml=renderReading(data,reading);
   const markdown=renderMarkdown(data,reading);
-  result.innerHTML=`<div class="result-heading"><div><div class="section-label">02 · 나의 사주</div><h2>태어난 순간의 네 기둥</h2></div><button type="button" id="exportMarkdown" class="secondary-button">풀이를 Markdown으로 저장</button></div><p class="dates">양력 ${escapeHtml(data.solar)} <span>·</span> 음력 ${escapeHtml(data.lunar)}</p>${data.warning.map(w=>`<p class="notice">${escapeHtml(w)}</p>`).join('')}${renderReadingToc(reading)}<div class="pillars">${cards}</div>${detail}${readingHtml}${day?`<details><summary>지장간과 십성 더 보기</summary><p>지장간은 지지에 배속하는 천간입니다. 괄호 안의 십성은 일간과의 관계입니다.</p><div class="hidden-list">${hidden}</div></details>`:''}<details><summary>글자 사이의 관계</summary><p>천간합·육합·충과 삼합·방합의 짝 또는 조합 후보를 표시합니다. 부분 조합은 후보이며, 합화나 길흉을 확정하지 않습니다. 미상인 기둥은 검사하지 않습니다.</p><div class="hidden-list">${data.relations.length?data.relations.map(r=>`<div>${r.name} · ${r.positions} (${r.characters})${r.element?` · ${r.element}`:''}${r.complete===false?` · 빠진 글자 ${r.missing.join('·')}`:''}</div>`).join(''):'확인된 관계가 없습니다.'}</div></details><details><summary>계산 기준과 한계</summary><p>절입 시각으로 연주와 월주를 정합니다. 출생 시각은 한국의 당시 표준시를 기준으로 하며, 1987~1988년 서머타임을 반영합니다. 일주와 시주는 입력한 보정 분을 표준시에서 빼 계산합니다. 30분은 근사값이며 출생지나 날짜에 따른 보정값을 자동 계산하지 않습니다.</p><p>일주는 ${data.boundary==='23'?'보정 시각의 밤 11시':'보정 시각의 자정'}를 기준으로 바뀝니다. ${data.standardTime?`당시 표준시: ${data.standardTime} · 보정된 시각: ${data.adjustedTime}${data.dst?' (서머타임 보정)':''}.`:''}</p><p>절기 경계의 초 단위는 자료에 따라 차이가 날 수 있습니다. 용신·대운은 아직 제공하지 않습니다.</p></details>`;
+  result.innerHTML=`<div class="result-heading"><div><div class="section-label">02 · 나의 사주</div><h2>태어난 순간의 네 기둥</h2></div><button type="button" id="exportMarkdown" class="secondary-button">풀이를 Markdown으로 저장</button></div><p class="dates">양력 ${escapeHtml(data.solar)} <span>·</span> 음력 ${escapeHtml(data.lunar)}</p>${data.warning.map(w=>`<p class="notice">${escapeHtml(w)}</p>`).join('')}${renderReadingToc(reading)}<div class="pillars">${cards}</div>${detail}${readingHtml}${day?`<details><summary>지장간과 십성 더 보기</summary><p>지장간은 지지에 배속하는 천간입니다. 괄호 안의 십성은 일간과의 관계입니다.</p><div class="hidden-list">${hidden}</div></details>`:''}<details><summary>글자 사이의 관계</summary><p>천간합·육합·충과 삼합·방합의 짝 또는 조합 후보를 표시합니다. 부분 조합은 후보이며, 합화나 길흉을 확정하지 않습니다. 미상인 기둥은 검사하지 않습니다.</p><div class="hidden-list">${data.relations.length?data.relations.map(r=>`<div>${r.name} · ${r.positions} (${r.characters})${r.element?` · ${r.element}`:''}${r.complete===false?` · 빠진 글자 ${r.missing.join('·')}`:''}</div>`).join(''):'확인된 관계가 없습니다.'}</div></details><details><summary>계산 기준과 한계</summary><p>절입 시각으로 연주와 월주를 정합니다. 출생 시각은 한국의 당시 표준시를 기준으로 하며, 1987~1988년 서머타임을 반영합니다. 일주와 시주는 입력한 보정 분을 표준시에서 빼 계산합니다. 30분은 근사값이며 출생지나 균시차를 자동 계산하지 않습니다.</p><p>일주는 ${data.boundary==='23'?'보정 시각의 밤 11시':'보정 시각의 자정'}를 기준으로 바뀝니다. ${data.standardTime?`당시 표준시: ${data.standardTime} · 보정된 시각: ${data.adjustedTime}${data.dst?' (서머타임 보정)':''}.`:''}</p><p>대운은 ${data.daeun?.available?'양년남·음년녀 순행 기준이며 3일=1년 환산과 개월 반올림을 적용한 근사치입니다.':'출생시각 또는 계산 기준 성별이 없어 생략했습니다.'} 용신을 포함한 종합 길흉 해석은 제공하지 않습니다.</p></details>`;
   result.querySelector('#exportMarkdown').addEventListener('click',()=>{
     const blob=new Blob([markdown],{type:'text/markdown;charset=utf-8'});
     const url=URL.createObjectURL(blob);

@@ -11,6 +11,7 @@ const hidden = ['壬癸','癸辛己','戊丙甲','甲乙','乙癸戊','戊庚丙
 const ten = [['비견','겁재'],['식신','상관'],['편재','정재'],['편관','정관'],['편인','정인']];
 const formatter = new Intl.DateTimeFormat('en-GB', { timeZone: 'Asia/Seoul', year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',hourCycle:'h23' });
 function parts(ms) { const p = Object.fromEntries(formatter.formatToParts(new Date(ms)).map(x => [x.type, x.value])); return [p.year,p.month,p.day,p.hour,p.minute].map(Number); }
+function formatKst(ms) { const [y,m,d,h,min]=parts(ms); return `${y}-${String(m).padStart(2,'0')}-${String(d).padStart(2,'0')} ${String(h).padStart(2,'0')}:${String(min).padStart(2,'0')}`; }
 function instant(y,m,d,h,min) {
   const wall = Date.UTC(y,m-1,d,h,min);
   const candidates = [540,600].map(offset => wall-offset*60000).filter(t => parts(t).join(',') === [y,m,d,h,min].join(','));
@@ -70,6 +71,35 @@ function calculate(input) {
     const natalPositions=pillars.map((p,i)=>p&&p[1]===clashes[branch]?['연지','월지','일지','시지'][i]:null).filter(Boolean);
     yearCycles.push({year:cycleYear,pillar:yearPillar,branch,ageBeforeBirthday:Math.max(0,cycleYear-y-1),ageAfterBirthday:Math.max(0,cycleYear-y),natalPositions});
   }
+  let daeun={available:false,reason:'순·역행 기준 성별을 선택하면 대운을 계산합니다.'};
+  if(input.sex==='male'||input.sex==='female'){
+    if(unknown) daeun={available:false,reason:'대운 시작 시점은 출생시각에 따라 달라져, 출생시간을 모르면 계산하지 않습니다.'};
+    else if(!yearP||!monthP) daeun={available:false,reason:'입춘 또는 절입 경계에서 연주·월주를 확정할 수 없어 대운을 계산하지 않습니다.'};
+    else {
+      const yearYang=stems.indexOf(yearP[0])%2===0, forward=yearYang===(input.sex==='male'), direction=forward?1:-1;
+      const birthChina=new Date(t+480*60000);
+      const birthLunar=Solar.fromYmdHms(birthChina.getUTCFullYear(),birthChina.getUTCMonth()+1,birthChina.getUTCDate(),birthChina.getUTCHours(),birthChina.getUTCMinutes(),0).getLunar();
+      const jie=forward?birthLunar.getNextJie():birthLunar.getPrevJie();
+      const jieSolar=jie?.getSolar();
+      if(!jieSolar) daeun={available:false,reason:'출생 시각과 인접 절입 시각을 비교할 수 없습니다.'};
+      else {
+        const jieInstant=Date.UTC(jieSolar.getYear(),jieSolar.getMonth()-1,jieSolar.getDay(),jieSolar.getHour(),jieSolar.getMinute(),jieSolar.getSecond())-480*60000;
+        const distanceMs=Math.abs(jieInstant-t),yearMs=365.2425*86400000,startAgeMonths=Math.max(0,Math.round(distanceMs/86400000*4));
+        const startOffsetMs=distanceMs/(3*86400000)*yearMs,sixty=Array.from({length:60},(_,i)=>stems[i%10]+branches[i%12]),monthIndex=sixty.indexOf(monthP);
+        if(monthIndex<0) daeun={available:false,reason:'월주 간지를 대운 순서로 변환할 수 없습니다.'};
+        else {
+          const startInstant=t+startOffsetMs;
+          const cycles=Array.from({length:8},(_,i)=>{
+            const fromMonths=startAgeMonths+i*120,toMonths=fromMonths+120;
+            const pillar=sixty[(monthIndex+direction*(i+1)+600)%60],branch=pillar[1];
+            const natalClashes=pillars.map((p,n)=>p&&p[1]===clashes[branch]?['연지','월지','일지','시지'][n]:null).filter(Boolean);
+            return {pillar,branch,natalClashes,fromAgeMonths:fromMonths,toAgeMonths:toMonths,startDate:formatKst(startInstant+i*10*yearMs),endDate:formatKst(startInstant+(i+1)*10*yearMs)};
+          });
+          daeun={available:true,direction:forward?'순행':'역행',sex:input.sex,yearStem:yearP[0],jie:jie.getName(),startAgeMonths,startAge:`${Math.floor(startAgeMonths/12)}년${startAgeMonths%12?` ${startAgeMonths%12}개월`:''}`,startDate:formatKst(startInstant),cycles};
+        }
+      }
+    }
+  }
   const rules=[['천간합','甲己 乙庚 丙辛 丁壬 戊癸',0],['지지 육합','子丑 寅亥 卯戌 辰酉 巳申 午未',1],['지지 충','子午 丑未 寅申 卯酉 辰戌 巳亥',1]];
   const positions=['연주','월주','일주','시주'],relations=[];
   for(const [name,pairs,pos] of rules) for(let a=0;a<4;a++) for(let b=a+1;b<4;b++) if(pillars[a]&&pillars[b]&&pairs.split(' ').some(pair=>pair.includes(pillars[a][pos])&&pair.includes(pillars[b][pos])&&pillars[a][pos]!==pillars[b][pos])) relations.push({name,positions:[positions[a],positions[b]].join('·'),characters:pillars[a][pos]+pillars[b][pos]});
@@ -81,6 +111,6 @@ function calculate(input) {
     relations.push({name,positions:found.filter(x=>present.includes(x.branch)).map(x=>positions[x.i]).join('·'),characters:present.join(''),element,complete:missing.length===0,missing});
   }
   const fmt=x=>`${x.getUTCFullYear()}-${String(x.getUTCMonth()+1).padStart(2,'0')}-${String(x.getUTCDate()).padStart(2,'0')} ${String(x.getUTCHours()).padStart(2,'0')}:${String(x.getUTCMinutes()).padStart(2,'0')}`;
-  return { solar:`${y}년 ${m}월 ${d}일`, lunar:`${lunar.year}년 ${lunar.isLeapMonth?'윤':''}${lunar.month}월 ${lunar.day}일`, pillars:pillars.map(p=>p?describe(p,day[0]):null), relations, yearCycles, warning, standardTime:unknown?null:fmt(standard), adjustedTime:unknown?null:fmt(adjusted), correction, dst:!unknown && (standard.getUTCHours()!==hm[0] || standard.getUTCDate()!==d), boundary:input.dayBoundary };
+  return { solar:`${y}년 ${m}월 ${d}일`, lunar:`${lunar.year}년 ${lunar.isLeapMonth?'윤':''}${lunar.month}월 ${lunar.day}일`, pillars:pillars.map(p=>p?describe(p,day[0]):null), relations, yearCycles, daeun, warning, standardTime:unknown?null:fmt(standard), adjustedTime:unknown?null:fmt(adjusted), correction, dst:!unknown && (standard.getUTCHours()!==hm[0] || standard.getUTCDate()!==d), boundary:input.dayBoundary };
 }
 module.exports={calculate};

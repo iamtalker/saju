@@ -40,6 +40,15 @@
           <label class="check"><input type="checkbox" id="unknown"> 태어난 시간을 몰라요</label>
         </div>
         <div class="field">
+          <label for="sex">대운 계산 기준 성별 <small>선택</small></label>
+          <select id="sex">
+            <option value="">선택 안 함</option>
+            <option value="male">남성 기준</option>
+            <option value="female">여성 기준</option>
+          </select>
+          <small>전통 순·역행 규칙에만 사용합니다. 선택하지 않으면 대운은 계산하지 않습니다.</small>
+        </div>
+        <div class="field">
           <label for="correction">출생시간 보정 <small>분</small></label>
           <input id="correction" type="number" min="-180" max="180" value="30">
           <small>표준시에서 빼는 분입니다. 기본 30분은 관례적인 근사값입니다. 다른 만세력에 표시된 보정값을 직접 입력할 수 있습니다.</small>
