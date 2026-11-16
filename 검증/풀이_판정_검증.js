@@ -41,6 +41,12 @@ assert.ok(a.months.find(m=>m.month===3).score<0);
 
 // 월운 등급과 좋은 달
 assert.deepEqual(a.months.filter(m=>m.good).map(m=>m.month),[8,9,10]);
-assert.equal(a.months.find(m=>m.month===7).level,'보통');
+assert.equal(a.months.find(m=>m.month===7).level,'주의'); // 乙은 신약에서 관성(기신)이다
+
+// 신약 명식의 관성은 기신이다. 1975-01-28 12:00 남성 갑인 정축 갑술 경오: 일간 甲, 관성 금.
+const O=calculate({year:1975,month:1,day:28,calendar:'solar',time:'12:00',unknown:false,correction:0,dayBoundary:'00',sex:'male'});
+assert.equal(O.analysis.strength.verdict,'신약');
+assert.ok(O.analysis.bu.기.includes('금'));
+assert.equal(O.analysis.bu.한,null);
 
 console.log('풀이 판정 회귀 통과: 귀문 표, 세운·대운 관계(육합·방합·자형·원진·귀문), 공망 표시, 월운 충 감점, 좋은 달 8·9·10');

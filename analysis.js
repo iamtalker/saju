@@ -78,7 +78,7 @@
 
     // 용신·희신·기신·한신 (억부 기준)
     const bu={용:null,희:null,기:[],한:null};
-    if(verdict==='신약'){ bu.용=producedBy(dayEl); bu.희=dayEl; bu.기=[controls(dayEl),produces(dayEl)]; bu.한=controlledBy(dayEl); }
+    if(verdict==='신약'){ bu.용=producedBy(dayEl); bu.희=dayEl; bu.기=[controls(dayEl),produces(dayEl),controlledBy(dayEl)]; bu.한=null; }
     else if(verdict==='신강'){ bu.용=produces(dayEl); bu.희=controls(dayEl); bu.기=[producedBy(dayEl),dayEl]; bu.한=controlledBy(dayEl); }
     // 조후와 억부가 어긋나면 갈림으로 본다
     let yong=null, status='정함', note='';
@@ -159,7 +159,7 @@
         if(stemH&&STEM_HAP[stemH]===p.stem) out.push({kind:'천간합',pos:STEMPOS[i]});
         if(branchH){ const ks=pairKind(branchH,p.branch); if(branchH===p.branch&&SELF_X.includes(branchH)) ks.push('자형'); ks.forEach(k=>out.push({kind:k,pos:BRPOS[i]})); }
       });
-      if(branchH){ for(const [x,y,z,el,type] of COMBOS){ const set=[x,y,z]; if(!set.includes(branchH)) continue; const others=set.filter(s=>s!==branchH); if(others.every(o=>natalBranchList.includes(o))) out.push({kind:el+' '+type+' 완성',pos:''}); } }
+      if(branchH){ for(const [x,y,z,el,type] of COMBOS){ const set=[x,y,z]; if(!set.includes(branchH)) continue; const others=set.filter(s=>s!==branchH); if(others.every(o=>natalBranchList.includes(o))) out.push({kind:el+' '+type+' 완성',pos:'',others,el,type}); } }
       return out;
     };
     const gmOf=b=>GM.includes(b);
@@ -178,7 +178,7 @@
     const months=(r.extras&&r.extras.monthlyFlow||[]).map(m=>{ const st=judgeStem(KO_ST[m.pillar[0]]); const hb=Object.keys(KO_BR).find(k=>KO_BR[k]===m.pillar[1]); const br=judgeBranch(hb); let score=weight(st,true)+weight(br,false); const stemCat=category(STEM_EL[KO_ST[m.pillar[0]]],dayEl); if(verdict==='신약'&&(stemCat==='재성'||stemCat==='관성')) score-=1; const hbr=hb; const rels=relationsWith(KO_ST[m.pillar[0]],hbr); const chung=rels.filter(x=>x.kind==='충').length; score-=2*chung; const level=score>=1?'좋은 달':score===0?'보통':'주의'; return {month:m.month,pillar:m.pillar,stem:st,branch:br,score,good:score>=1,level,rels,chung,gm:gmOf(hbr)}; });
 
     return {dayEl,strength,gyeokguk,season,johu,jong,bu,yong,status,note,natal:{relations,stemRel,twelve,gongmang,gongmangBranches:GM.map(b=>({b,judge:judgeBranch(b)})),elCount,lacking,excess,sinsal},years,cycles:cyclesJudged,months,
-      criteria:{strength:'득령: 월지 본기가 비겁·인성. 득지: 일지 지장간에 비겁·인성이 있음. 득세: 천간 3개와 지지 본기 4개 중 비겁·인성이 3개 이상. 3개면 신강, 0개면 신약, 1~2개면 갈림.',johu:'亥·子·丑월은 火, 巳·午·未월은 水를 필요 오행으로 봅니다. 봄·가을은 따로 보지 않습니다.',yong:'신약이면 인성을 용신, 비겁을 희신으로 봅니다. 신강이면 식상을 용신, 재성을 희신으로 봅니다. 조후와 억부가 어긋나면 갈림입니다.',gi:'신약에서는 재성과 식상이 기신, 관성은 한신입니다. 신강에서는 인성과 비겁이 기신입니다.',month:'월운은 천간에 가중치 용신 +2, 희신 +1, 기신 -2, 지지에 용신 +1, 희신 +1, 기신 -1을 더합니다. 신약이면 천간이 재성·관성인 달은 추가로 -1, 원국 지지와 충이 있으면 충 하나마다 -2를 합니다. 합계 1점 이상이면 좋은 달, 0점이면 보통, 음수이면 주의입니다.',relations:'세운·대운·월운의 지지와 천간을 원국 네 기둥과 대조합니다. 천간합, 지지 충·육합·형·파·해·원진·귀문·자형을 식별하고, 방합·삼합은 원국 지지와 합쳐 완성되는 경우만 봅니다. 귀문은 子酉·丑午·寅未·卯申·辰亥·巳戌 여섯 쌍입니다.',shinsal:'천을귀인과 문창귀인, 양인살은 일간 기준, 백호살과 괴강살은 간지 기준, 12신살은 년지 삼합 기준입니다. 공망은 일주 기준입니다.',gongmang:'공망은 일주 기준으로 午·未 같은 두 지지를 구하고, 그 지지가 용신·희신·기신 중 무엇인지 적습니다. 세운·대운·월운의 지지가 공망 지지이면 공망으로 표시합니다.',gyeok:'격은 월지 본기의 십성으로 정하고, 같은 십성이 천간에 드러나면 투출로 봅니다.'}};
+      criteria:{strength:'득령: 월지 본기가 비겁·인성. 득지: 일지 지장간에 비겁·인성이 있음. 득세: 천간 3개와 지지 본기 4개 중 비겁·인성이 3개 이상. 3개면 신강, 0개면 신약, 1~2개면 갈림.',johu:'亥·子·丑월은 火, 巳·午·未월은 水를 필요 오행으로 봅니다. 봄·가을은 따로 보지 않습니다.',yong:'신약이면 인성을 용신, 비겁을 희신으로 봅니다. 신강이면 식상을 용신, 재성을 희신으로 봅니다. 조후와 억부가 어긋나면 갈림입니다.',gi:'신약에서는 재성·식상·관성이 기신입니다. 신강에서는 인성과 비겁이 기신이고, 관성은 한신입니다.',month:'월운은 천간에 가중치 용신 +2, 희신 +1, 기신 -2, 지지에 용신 +1, 희신 +1, 기신 -1을 더합니다. 신약이면 천간이 재성·관성인 달은 추가로 -1, 원국 지지와 충이 있으면 충 하나마다 -2를 합니다. 합계 1점 이상이면 좋은 달, 0점이면 보통, 음수이면 주의입니다.',relations:'세운·대운·월운의 지지와 천간을 원국 네 기둥과 대조합니다. 천간합, 지지 충·육합·형·파·해·원진·귀문·자형을 식별하고, 방합·삼합은 원국 지지와 합쳐 완성되는 경우만 봅니다. 귀문은 子酉·丑午·寅未·卯申·辰亥·巳戌 여섯 쌍입니다.',shinsal:'천을귀인과 문창귀인, 양인살은 일간 기준, 백호살과 괴강살은 간지 기준, 12신살은 년지 삼합 기준입니다. 공망은 일주 기준으로 午·未 같은 두 지지를 구하고, 그 지지가 용신·희신·기신 중 무엇인지 적습니다. 세운·대운·월운의 지지가 공망 지지이면 공망으로 표시합니다.',gyeok:'격은 월지 본기의 십성으로 정하고, 같은 십성이 천간에 드러나면 투출로 봅니다.'}};
   }
   function branchOrder(b){ return '子丑寅卯辰巳午未申酉戌亥'.indexOf(b); }
   return {analyze, PAIRS, pairKind};
