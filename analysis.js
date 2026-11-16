@@ -109,7 +109,7 @@
     if(yiPos.length) sinsal.push({name:'양인살',positions:yiPos.join('·'),note:'양간 일간 기준 지지'});
     const bh=r.pillars.map((p,i)=>p&&BAEKHO.includes(p.hanja)?['연주','월주','일주','시주'][i]:null).filter(Boolean);
     if(bh.length) sinsal.push({name:'백호살',positions:bh.join('·'),note:'간지 기준'});
-    const gg=r.pillars.map((p,i)=>p&&GOEGANG.includes(p.hanja)?['연주','월주','일주','시주'][i]:null).filter(Boolean);
+    const gg=r.pillars.map((p,i)=>p&&i===2&&GOEGANG.includes(p.hanja)?'일주':null).filter(Boolean);
     if(gg.length) sinsal.push({name:'괴강살',positions:gg.join('·'),note:'간지 기준'});
     // 12신살: 년지 삼합 기준
     const yb=r.pillars[0].branch;
@@ -138,7 +138,16 @@
       return '중립';
     };
     const judgeStem=s=>judge(STEM_EL[s]);
-    const judgeBranch=b=>judge(BR_EL[b]);
+    // 지지 판정: 달·세운·대운의 지지가 원국 지지와 방합·삼합을 완성하면 그 합의 오행으로 본다.
+    // 조후 용신이 화인 명식에서는 丑·辰을 희신으로 치지 않는다.
+    const natalBranchList=r.pillars.filter(Boolean).map(p=>p.branch);
+    const COMBOS=[['亥','子','丑','수'],['寅','卯','辰','목'],['巳','午','未','화'],['申','酉','戌','금'],['申','子','辰','수'],['亥','卯','未','목'],['寅','午','戌','화'],['巳','酉','丑','금']];
+    const judgeBranch=b=>{
+      for(const [x,y,z,el] of COMBOS){ const set=[x,y,z]; if(!set.includes(b)) continue; const others=set.filter(s=>s!==b); if(others.every(o=>natalBranchList.includes(o))) return judge(el); }
+      const own=judge(BR_EL[b]);
+      if(johu==='화'&&(b==='丑'||b==='辰')&&own==='희신') return '중립';
+      return own;
+    };
 
     // 세운: 해마다 천간·지지 판정과 원국 관계
     const years=(r.yearCycles||[]).map(y=>{

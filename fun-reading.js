@@ -122,7 +122,7 @@
     const natalLines=[];
     if(a.natal.relations.length) natalLines.push(...a.natal.relations.map(x=>`${x.positions} ${x.characters} ${x.kinds.join('·')}`));
     if(a.natal.stemRel.length) natalLines.push(...a.natal.stemRel.map(x=>`${x.positions} ${x.characters} 천간합`));
-    const sinsalLine=(a.natal.sinsal||[]).map(s=>`${s.name} ${s.positions}`).join(' · ')||'해당 없음';
+    const sinsalLine=(a.natal.sinsal||[]).map(s=>`${s.name} ${s.positions}`).join(' · ')||'특수 신살은 없습니다';
     const twelveLine=(a.natal.twelve||[]).map(t=>`${t.pos} ${t.b} ${t.name}`).join(' · ');
     const gongLine=(a.natal.gongmang||[]).map(g=>`${g.pos} ${g.b}: ${g.meaning}`).join(' · ')||'원국에 공망이 없습니다.';
     return `<article id="reading-fun-all" class="reading-card"><span>풀이</span><h3>종합 총평</h3>`
