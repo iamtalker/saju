@@ -29,4 +29,9 @@ const tocPosition=app.indexOf('${renderReadingToc(reading)}');
 const pillarsPosition=app.indexOf('<div class="pillars">${cards}</div>');
 assert.ok(tocPosition>=0&&pillarsPosition>tocPosition);
 
+// 1982-01-05 23:00(보정 30분, 亥시 계산)의 세운 충: 2026 午子(월·일지), 2035 卯酉(연지), 2037 巳亥(시지).
+const feedbackCase=calculate({year:1982,month:1,day:5,calendar:'solar',time:'23:00',unknown:false,correction:30,dayBoundary:'00',sex:'male'});
+const clashYears=feedbackCase.yearCycles.filter(y=>y.natalPositions.length).map(y=>[y.year,y.pillar,y.natalPositions.join(',')]);
+assert.deepEqual(clashYears,[[2026,'丙午','월지,일지'],[2035,'乙卯','연지'],[2037,'丁巳','시지']]);
+
 console.log('풀이 확장, 상단 목차, 관계 완성·부분 조합, 지장간 및 시간 미상 처리 통과');

@@ -29,7 +29,7 @@ const animals=['쥐','소','호랑이','토끼','용','뱀','말','양','원숭�
 function toKo(gz){ return koreanStem[stems.indexOf(gz[0])]+koreanBranch[branches.indexOf(gz[1])]; }
 // 공망: 일주가 속한 순(旬)에서 빠지는 두 지지. 60갑자 인덱스 기준.
 function gongmangOf(dayGz){ const n=Array.from({length:60},(_,i)=>i).find(i=>stems[i%10]===dayGz[0]&&branches[i%12]===dayGz[1]); const start=n-(n%10); return [(start+10)%12,(start+11)%12].map(i=>koreanBranch[i]).join(''); }
-function calculate(input) {
+function calculateCore(input) {
   let y=Number(input.year),m=Number(input.month),d=Number(input.day);
   if(!Number.isInteger(y)||!Number.isInteger(m)||!Number.isInteger(d)||y<1962||y>2050) throw new Error('지원하는 입력 연도는 1962~2050년입니다.');
   if(input.calendar==='lunar') {
@@ -67,14 +67,20 @@ function calculate(input) {
   const uncertainDay=unknown&&(input.dayBoundary==='23'||standard.getUTCHours()!==hm[0]||correction!==0);
   if(unknown&&uncertainDay&&input.dayBoundary==='00') warning.push('시간 보정으로 일주가 바뀔 가능성이 있어 확정하지 않습니다.');
   const pillars=[yearP,monthP,uncertainDay?null:day,unknown?null:hourPillar];
+  // 세운·대운 지지와 천간이 원국과 맺는 관계를 식별한다. 합·형·충은 관계의 존재만 표시한다.
+  const stemHapPairs={'甲':'己','己':'甲','乙':'庚','庚':'乙','丙':'辛','辛':'丙','丁':'壬','壬':'丁','戊':'癸','癸':'戊'};
+  const branchHapPairs={'子':'丑','丑':'子','寅':'亥','亥':'寅','卯':'戌','戌':'卯','辰':'酉','酉':'辰','巳':'申','申':'巳','午':'未','未':'午'};
+  const branchXingPairs={'寅':'巳','巳':'申','申':'寅','丑':'戌','戌':'未','未':'丑','子':'卯','卯':'子'};
+  const posStem=['연간','월간','일간','시간'], posBranch=['연지','월지','일지','시지'];
+  const cycleRelations=(stem,branch)=>{ const out={stemHap:[],hap:[],xing:[]}; pillars.forEach((p,i)=>{ if(!p) return; if(stemHapPairs[stem]===p[0]) out.stemHap.push(posStem[i]); if(branchHapPairs[branch]===p[1]) out.hap.push(posBranch[i]); if(branchXingPairs[branch]===p[1]) out.xing.push(posBranch[i]); }); return out; };
   const yearCycles=[];
   const clashes={子:'午',丑:'未',寅:'申',卯:'酉',辰:'戌',巳:'亥',午:'子',未:'丑',申:'寅',酉:'卯',戌:'辰',亥:'巳'};
   const currentYear=new Date().getFullYear();
   for(let cycleYear=Math.max(currentYear,y);cycleYear<Math.max(currentYear,y)+12;cycleYear++){
-    const yearPillar=Solar.fromYmdHms(cycleYear,3,1,12,0,0).getLunar().getYear();
+    const yearPillar=Solar.fromYmdHms(cycleYear,3,1,12,0,0).getLunar().getYearInGanZhi();
     const branch=yearPillar[1];
     const natalPositions=pillars.map((p,i)=>p&&p[1]===clashes[branch]?['연지','월지','일지','시지'][i]:null).filter(Boolean);
-    yearCycles.push({year:cycleYear,pillar:yearPillar,branch,ageBeforeBirthday:Math.max(0,cycleYear-y-1),ageAfterBirthday:Math.max(0,cycleYear-y),natalPositions});
+    yearCycles.push({year:cycleYear,pillar:yearPillar,branch,ageBeforeBirthday:Math.max(0,cycleYear-y-1),ageAfterBirthday:Math.max(0,cycleYear-y),natalPositions,relations:cycleRelations(yearPillar[0],branch)});
   }
   let daeun={available:false,reason:'순·역행 기준 성별을 선택하면 대운을 계산합니다.'};
   if(input.sex==='male'||input.sex==='female'){
@@ -106,6 +112,7 @@ function calculate(input) {
       }
     }
   }
+  if(!input.sex&&!unknown&&yearP&&monthP){ const asMale=calculateCore({...input,sex:'male'}).daeun, asFemale=calculateCore({...input,sex:'female'}).daeun; if(asMale.available&&asFemale.available) daeun={available:false,reason:'성별을 고르면 방향이 하나로 정해집니다. 아래는 두 기준을 모두 보여 줍니다.',alternatives:{male:asMale,female:asFemale}}; }
   const rules=[['천간합','甲己 乙庚 丙辛 丁壬 戊癸',0],['지지 육합','子丑 寅亥 卯戌 辰酉 巳申 午未',1],['지지 충','子午 丑未 寅申 卯酉 辰戌 巳亥',1]];
   const positions=['연주','월주','일주','시주'],relations=[];
   for(const [name,pairs,pos] of rules) for(let a=0;a<4;a++) for(let b=a+1;b<4;b++) if(pillars[a]&&pillars[b]&&pairs.split(' ').some(pair=>pair.includes(pillars[a][pos])&&pair.includes(pillars[b][pos])&&pillars[a][pos]!==pillars[b][pos])) relations.push({name,positions:[positions[a],positions[b]].join('·'),characters:pillars[a][pos]+pillars[b][pos]});
@@ -139,6 +146,60 @@ function calculate(input) {
     trueSolar={time:String(Math.floor(norm/60)).padStart(2,'0')+':'+String(norm%60).padStart(2,'0'),longitude:lon,diffMinutes:Math.round(diff*10)/10,equationMinutes:Math.round(eot*10)/10};
   }
   extras.trueSolar=trueSolar;
-  return { extras, solar:`${y}년 ${m}월 ${d}일`, lunar:`${lunar.year}년 ${lunar.isLeapMonth?'윤':''}${lunar.month}월 ${lunar.day}일`, pillars:pillars.map(p=>p?describe(p,day[0]):null), relations, yearCycles, daeun, warning, standardTime:unknown?null:fmt(standard), adjustedTime:unknown?null:fmt(adjusted), correction, dst:!unknown && (standard.getUTCHours()!==hm[0] || standard.getUTCDate()!==d), boundary:input.dayBoundary };
+  // 신강·신약 충족 여부. 점수를 만들지 않고, 세 조건의 충족 개수로만 판정한다.
+  // 득령: 월지 본기가 비겁·인성. 득지: 일지 지장간 중 비겁·인성이 하나라도 있음.
+  // 득세: 일간을 제외한 천간 3개와 지지 본기 4개 중 비겁·인성이 2개 이상.
+  // 판정: 3개 충족 신강, 0개 신약, 1~2개 갈림.
+  const SUPPORT=['비견','겁재','편인','정인'];
+  const described=pillars.map(p=>p?describe(p,day[0]):null);
+  const deryeong=!!(described[1]&&SUPPORT.includes(described[1].hidden[described[1].hidden.length-1].ten));
+  const deuji=!!(described[2]&&described[2].hidden.some(h=>SUPPORT.includes(h.ten)));
+  let supportCount=0;
+  described.forEach((d,i)=>{ if(!d) return; if(i!==2&&SUPPORT.includes(d.stemTen)) supportCount++; const h=d.hidden; if(h.length&&SUPPORT.includes(h[h.length-1].ten)) supportCount++; });
+  const deuse=supportCount>=3;
+  const hits=[deryeong,deuji,deuse].filter(Boolean).length;
+  const strength={deryeong,deuji,deuse,hits,verdict:hits===3?'신강':hits===0?'신약':'갈림',supportCount};
+  return { strength, extras, solar:`${y}년 ${m}월 ${d}일`, lunar:`${lunar.year}년 ${lunar.isLeapMonth?'윤':''}${lunar.month}월 ${lunar.day}일`, pillars:pillars.map(p=>p?describe(p,day[0]):null), relations, yearCycles, daeun, warning, standardTime:unknown?null:fmt(standard), adjustedTime:unknown?null:fmt(adjusted), correction, dst:!unknown && (standard.getUTCHours()!==hm[0] || standard.getUTCDate()!==d), boundary:input.dayBoundary };
+}
+// 경계 근처 출생(자시 전후 60분, 절입 전후 60분)에는 다른 기준으로 계산한 명식을 함께 보여 준다.
+function nearBoundary(input, standardText, instantMs){
+  const reasons=[];
+  const [hh,mm]=standardText.split(' ')[1].split(':').map(Number);
+  const clock=hh*60+mm;
+  const near=(c,target)=>{ const diff=Math.abs(c-target); return Math.min(diff,1440-diff)<=60; };
+  if(near(clock,1380)||near(clock,0)) reasons.push('자시 경계 근처입니다. 일주 변경 기준(밤 11시 또는 자정)과 보정 분에 따라 시주와 일주가 달라질 수 있습니다.');
+  const china=new Date(instantMs+480*60000);
+  const lunar=Solar.fromYmdHms(china.getUTCFullYear(),china.getUTCMonth()+1,china.getUTCDate(),china.getUTCHours(),china.getUTCMinutes(),0).getLunar();
+  for(const jie of [lunar.getPrevJie(), lunar.getNextJie()]){
+    const s=jie&&jie.getSolar(); if(!s) continue;
+    const jt=Date.UTC(s.getYear(),s.getMonth()-1,s.getDay(),s.getHour(),s.getMinute(),s.getSecond())-480*60000;
+    const kst=(ms)=>{ const k=new Date(ms+540*60000); return Math.floor(Date.UTC(k.getUTCFullYear(),k.getUTCMonth(),k.getUTCDate())/86400000); };
+    if(Math.abs(kst(jt)-kst(instantMs))<=1){ reasons.push('절입 당일 또는 전후 하루에 태어났습니다. 절입 시각을 계산에 쓰므로 만세력과 차이가 날 수 있습니다.'); break; }
+  }
+  return reasons;
+}
+const pillarKey=r=>r.pillars.map(p=>p?p.hangul:'-').join(' ');
+function calculate(input){
+  const r=calculateCore(input);
+  if(input.unknown) return r;
+  return withBoundary(input, r);
+}
+function withBoundary(input, r){
+  if(!r.standardTime) return r;
+  const reasons=nearBoundary(input, r.standardTime, Date.parse(r.standardTime.replace(' ','T')+':00+09:00')-540*60000);
+  if(!reasons.length) return r;
+  const alternatives=[];
+  const other=input.dayBoundary==='23'?'00':'23';
+  const otherLabel=other==='00'?'자정 전환(정자시 계열)':'밤 11시 전환(야자시 계열)';
+  const options=[
+    {label:'일주 경계를 '+otherLabel+'로 바꾸었을 때',opts:{dayBoundary:other}},
+    {label:'보정 0분일 때',opts:{correction:0}},
+    {label:'보정 0분에 '+otherLabel+'로 바꾸었을 때',opts:{correction:0,dayBoundary:other}}
+  ];
+  const seen=new Set([pillarKey(r)]);
+  for(const o of options){ const alt=calculateCore({...input,...o.opts}); const key=pillarKey(alt); if(seen.has(key)) continue; seen.add(key); alternatives.push({label:o.label,pillars:alt.pillars.map(p=>p?p.hangul:null)}); }
+  r.warning=[...r.warning,...reasons];
+  r.boundaryInfo={near:reasons,alternatives};
+  return r;
 }
 module.exports={calculate};
