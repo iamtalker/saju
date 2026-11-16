@@ -191,7 +191,7 @@
       if(y.rels.some(x=>x.kind==='충')) parts.push('원국과 충이 있어 그 자리의 일정과 관계가 흔들리기 쉽습니다.');
       return parts.join(' ');
     }).join('<br>');
-    const yearRest=a.years.filter(y=>y!==yNow&&y!==yNext).map(y=>{ const rel=relText(y.rels); return `${y.year}년 ${y.pillar}: ${judgeText(y.stem)}·${judgeText(y.branch)}${rel?', 원국과 '+rel:''}${y.gm?', 공망':''}.`; }).join('<br>');
+    const yearRest=a.years.filter(y=>y!==yNow&&y!==yNext).map(y=>{ const rel=relText(y.rels); return `${y.year}년 ${y.pillar}: 천간 ${KOS2[y.pillar[0]]}(${y.pillar[0]})${josa(KOS2[y.pillar[0]],'은','는')} ${judgeText(y.stem)}, 지지 ${KOB[y.pillar[1]]}(${y.pillar[1]})${josa(KOB[y.pillar[1]],'은','는')} ${judgeText(y.branch)}입니다.${rel?' 원국과의 관계: '+rel+'.':' 원국과 충·합·형 관계가 없습니다.'}${y.gm?' 지지가 공망입니다.':''}`; }).join('<br>');
     const yearText=yearDetail+(yearRest?'<br>'+yearRest:'');
     // 월운
     const monthLines=a.months.map(m=>`${m.month}월 ${m.pillar}: 천간 ${KOS2[m.pillar[0]]||m.pillar[0]} ${judgeText(m.stem)}, 지지 ${m.pillar[1]} ${judgeText(m.branch)}.${m.rels.length?' 원국과의 관계: '+relText(m.rels)+'.':''}${m.gm?' 공망입니다.':''} (점수 ${m.score>0?'+':''}${m.score}). ${m.level}.`);
@@ -202,8 +202,8 @@
     if(a.natal.stemRel.length) natalLines.push(...a.natal.stemRel.map(x=>`${x.positions} ${x.characters} 천간합`));
     const sinsalLine=(a.natal.sinsal||[]).map(s=>`${s.name} ${s.positions}`).join(' · ')||'특수 신살은 없습니다';
     const twelveLine=(a.natal.twelve||[]).map(t=>`${t.pos} ${t.b} ${t.name}`).join(' · ');
-    const gmNote=a.natal.gongmangBranches.map(x=>`${KOB[x.b]}(${x.b})는 ${x.judge}`).join(', ');
-    const gongLine=(a.natal.gongmang||[]).length?`공망 지지는 ${gmNote}. 원국에 공망이 있습니다: ${(a.natal.gongmang||[]).map(x=>`${x.pos} ${x.b}, ${x.meaning}`).join(' · ')}.`:`공망 지지는 ${gmNote}. 원국에는 공망 지지가 없습니다. 세운·대운·월운의 지지가 이 자리에 오면 공망으로 표시합니다.`;
+    const gmNote=a.natal.gongmangBranches.map(x=>`${KOB[x.b]}(${x.b})${josa(KOB[x.b],'은','는')} ${x.judge}`).join(', ');
+    const gongLine=(a.natal.gongmang||[]).length?`공망 지지: ${gmNote}. 원국에 공망이 있습니다: ${(a.natal.gongmang||[]).map(x=>`${x.pos} ${x.b}, ${x.meaning}`).join(' · ')}.`:`공망 지지: ${gmNote}. 원국에는 공망 지지가 없습니다. 세운·대운·월운의 지지가 이 자리에 오면 공망으로 표시합니다.`;
     return `<article id="reading-fun-all" class="reading-card"><span>풀이</span><h3>종합 총평</h3>`
       + SECTION('종합 총평', summary)
       + SECTION('성격', personality)
