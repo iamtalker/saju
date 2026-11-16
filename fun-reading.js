@@ -106,7 +106,12 @@ const MISSING={
     // 종합 총평: 구조를 한 문장으로 먼저 요약한다
     const surround=excess.filter(e=>e!==dayEl).slice(0,2).join('·');
     const seasonWord=a.season==='겨울'?'한겨울':a.season;
-    const structure=`${seasonWord}에 태어나 ${surround?surround+' 기운에 둘러싸인 ':''}${verdict==='신약'?'약한 ':verdict==='신강'?'강한 ':''}${dayEl}(${dayChar})이고, ${g.식상>=2&&V==='신약'?'표현하고 만들어 내는 힘은 큰데 그것을 받아 쥘 힘이 약하며':V==='신강'?'스스로 힘을 쓸 수 있으며':'힘의 균형이 맞지 않으며'}${a.yong&&!yongInNatal?`, 필요한 ${yongEl}가 원국에 없습니다.`:'.'}`;
+    // 용신이 원국에 없으면 "~며, 필요한 ~가 원국에 없습니다."로 잇고, 없으면 "~니다."로 끝낸다.
+    const predOpts=g.식상>=2&&V==='신약'
+      ?['표현하고 만들어 내는 힘은 큰데 그것을 받아 쥘 힘이 약합니다','표현하고 만들어 내는 힘은 큰데 그것을 받아 쥘 힘이 약하며']
+      :V==='신강'?['스스로 힘을 쓸 수 있습니다','스스로 힘을 쓸 수 있으며']:['힘의 균형이 맞지 않습니다','힘의 균형이 맞지 않으며'];
+    const yongMissing=!!(a.yong&&!yongInNatal);
+    const structure=`${seasonWord}에 태어나 ${surround?surround+' 기운에 둘러싸인 ':''}${verdict==='신약'?'약한 ':verdict==='신강'?'강한 ':''}${dayEl}(${dayChar})이고, ${yongMissing?predOpts[1]+`, 필요한 ${yongEl}가 원국에 없습니다.`:predOpts[0]+'.'}`;
     // 지장간 여부: 겉으로 드러난 십성과 지장간에만 있는 십성을 가른다
     const visibleG=new Set(Object.keys(g).filter(k=>g[k]>0));
     const hiddenG=new Set(); data.pillars.forEach(p=>{ if(!p||!p.hidden) return; p.hidden.slice(0,-1).forEach(h=>{ if(GROUP_OF[h.ten]) hiddenG.add(GROUP_OF[h.ten]); }); });
