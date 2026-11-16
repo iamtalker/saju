@@ -3,7 +3,7 @@ const fs=require('fs');
 const path=require('path');
 const {calculate}=require('./engine');
 const port=Number(process.env.SAJU_PORT)||3210;
-const files={'/':['index.html','text/html; charset=utf-8'],'/app.js':['app.js','text/javascript; charset=utf-8'],'/reading.js':['reading.js','text/javascript; charset=utf-8'],'/style.css':['style.css','text/css; charset=utf-8']};
+const files={'/':['index.html','text/html; charset=utf-8'],'/app.js':['app.js','text/javascript; charset=utf-8'],'/reading.js':['reading.js','text/javascript; charset=utf-8'],'/fun-reading.js':['fun-reading.js','text/javascript; charset=utf-8'],'/style.css':['style.css','text/css; charset=utf-8']};
 const server=http.createServer((req,res)=>{
   if(req.method==='GET'&&files[req.url]){const [name,type]=files[req.url];res.writeHead(200,{'Content-Type':type});return fs.createReadStream(path.join(__dirname,name)).pipe(res);}
   if(req.method==='POST'&&req.url==='/api/calculate'){

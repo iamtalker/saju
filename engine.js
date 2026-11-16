@@ -10,6 +10,7 @@ const branchElements = ['수','토','목','목','토','화','화','토','금','�
 const hidden = ['壬癸','癸辛己','戊丙甲','甲乙','乙癸戊','戊庚丙','丙己丁','丁乙己','戊壬庚','庚辛','辛丁戊','戊甲壬'];
 const ten = [['비견','겁재'],['식신','상관'],['편재','정재'],['편관','정관'],['편인','정인']];
 const formatter = new Intl.DateTimeFormat('en-GB', { timeZone: 'Asia/Seoul', year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',hourCycle:'h23' });
+const jieNames={'立春':'입춘','惊蛰':'경칩','清明':'청명','立夏':'입하','芒种':'망종','小暑':'소서','立秋':'입추','白露':'백로','寒露':'한로','立冬':'입동','大雪':'대설','小寒':'소한'};
 function parts(ms) { const p = Object.fromEntries(formatter.formatToParts(new Date(ms)).map(x => [x.type, x.value])); return [p.year,p.month,p.day,p.hour,p.minute].map(Number); }
 function formatKst(ms) { const [y,m,d,h,min]=parts(ms); return `${y}-${String(m).padStart(2,'0')}-${String(d).padStart(2,'0')} ${String(h).padStart(2,'0')}:${String(min).padStart(2,'0')}`; }
 function instant(y,m,d,h,min) {
@@ -24,6 +25,10 @@ function describe(p, dayStem) {
   const sipsin = n => ten[(Math.floor(n/2)-Math.floor(di/2)+5)%5][n%2===di%2?0:1];
   return { hanja:p, hangul:koreanStem[a]+koreanBranch[b], stem:p[0], branch:p[1], stemElement:elements[Math.floor(a/2)], branchElement:branchElements[b], stemYin:a%2?'음':'양', branchYin:b%2?'음':'양', stemTen:sipsin(a), hidden:[...hidden[b]].map(x=>({hanja:x, hangul:koreanStem[stems.indexOf(x)], ten:sipsin(stems.indexOf(x))})) };
 }
+const animals=['쥐','소','호랑이','토끼','용','뱀','말','양','원숭이','닭','개','돼지'];
+function toKo(gz){ return koreanStem[stems.indexOf(gz[0])]+koreanBranch[branches.indexOf(gz[1])]; }
+// 공망: 일주가 속한 순(旬)에서 빠지는 두 지지. 60갑자 인덱스 기준.
+function gongmangOf(dayGz){ const n=Array.from({length:60},(_,i)=>i).find(i=>stems[i%10]===dayGz[0]&&branches[i%12]===dayGz[1]); const start=n-(n%10); return [(start+10)%12,(start+11)%12].map(i=>koreanBranch[i]).join(''); }
 function calculate(input) {
   let y=Number(input.year),m=Number(input.month),d=Number(input.day);
   if(!Number.isInteger(y)||!Number.isInteger(m)||!Number.isInteger(d)||y<1962||y>2050) throw new Error('지원하는 입력 연도는 1962~2050년입니다.');
@@ -84,8 +89,9 @@ function calculate(input) {
       if(!jieSolar) daeun={available:false,reason:'출생 시각과 인접 절입 시각을 비교할 수 없습니다.'};
       else {
         const jieInstant=Date.UTC(jieSolar.getYear(),jieSolar.getMonth()-1,jieSolar.getDay(),jieSolar.getHour(),jieSolar.getMinute(),jieSolar.getSecond())-480*60000;
-        const distanceMs=Math.abs(jieInstant-t),yearMs=365.2425*86400000,startAgeMonths=Math.max(0,Math.round(distanceMs/86400000*4));
-        const startOffsetMs=distanceMs/(3*86400000)*yearMs,sixty=Array.from({length:60},(_,i)=>stems[i%10]+branches[i%12]),monthIndex=sixty.indexOf(monthP);
+        // 대운수 = 인접 절까지 일수 ÷ 3을 반올림한 년수, 최소 1년(다수 구현 공통 규칙).
+        const distanceMs=Math.abs(jieInstant-t),yearMs=365.2425*86400000,startYears=Math.max(1,Math.round(distanceMs/86400000/3)),startAgeMonths=startYears*12,carryMonths=Math.max(0,Math.round(distanceMs/86400000*4));
+        const startOffsetMs=startYears*yearMs,sixty=Array.from({length:60},(_,i)=>stems[i%10]+branches[i%12]),monthIndex=sixty.indexOf(monthP);
         if(monthIndex<0) daeun={available:false,reason:'월주 간지를 대운 순서로 변환할 수 없습니다.'};
         else {
           const startInstant=t+startOffsetMs;
@@ -95,7 +101,7 @@ function calculate(input) {
             const natalClashes=pillars.map((p,n)=>p&&p[1]===clashes[branch]?['연지','월지','일지','시지'][n]:null).filter(Boolean);
             return {pillar,branch,natalClashes,fromAgeMonths:fromMonths,toAgeMonths:toMonths,startDate:formatKst(startInstant+i*10*yearMs),endDate:formatKst(startInstant+(i+1)*10*yearMs)};
           });
-          daeun={available:true,direction:forward?'순행':'역행',sex:input.sex,yearStem:yearP[0],jie:jie.getName(),startAgeMonths,startAge:`${Math.floor(startAgeMonths/12)}년${startAgeMonths%12?` ${startAgeMonths%12}개월`:''}`,startDate:formatKst(startInstant),cycles};
+          daeun={available:true,direction:forward?'순행':'역행',sex:input.sex,yearStem:yearP[0],jie:jieNames[jie.getName()]||jie.getName(),startAgeMonths,comparison:{rounded:`${startYears}년`,monthCarry:`${Math.floor(carryMonths/12)}년${carryMonths%12?` ${carryMonths%12}개월`:''}`},startAge:`${Math.floor(startAgeMonths/12)}년${startAgeMonths%12?` ${startAgeMonths%12}개월`:''}`,startDate:formatKst(startInstant),cycles};
         }
       }
     }
@@ -111,6 +117,28 @@ function calculate(input) {
     relations.push({name,positions:found.filter(x=>present.includes(x.branch)).map(x=>positions[x.i]).join('·'),characters:present.join(''),element,complete:missing.length===0,missing});
   }
   const fmt=x=>`${x.getUTCFullYear()}-${String(x.getUTCMonth()+1).padStart(2,'0')}-${String(x.getUTCDate()).padStart(2,'0')} ${String(x.getUTCHours()).padStart(2,'0')}:${String(x.getUTCMinutes()).padStart(2,'0')}`;
-  return { solar:`${y}년 ${m}월 ${d}일`, lunar:`${lunar.year}년 ${lunar.isLeapMonth?'윤':''}${lunar.month}월 ${lunar.day}일`, pillars:pillars.map(p=>p?describe(p,day[0]):null), relations, yearCycles, daeun, warning, standardTime:unknown?null:fmt(standard), adjustedTime:unknown?null:fmt(adjusted), correction, dst:!unknown && (standard.getUTCHours()!==hm[0] || standard.getUTCDate()!==d), boundary:input.dayBoundary };
+  // 띠, 공망, 십신 개수, 올해 월별 간지, 오늘의 일진. 계산 항목이며 해석을 포함하지 않는다.
+  const nowKst=parts(Date.now());
+  const dayGzDay=day;
+  const sipCounts={};
+  const addTen=n=>{ if(n) sipCounts[n]=(sipCounts[n]||0)+1; };
+  pillars.forEach((p,i)=>{ if(!p) return; if(i!==2) addTen(describe(p,day[0]).stemTen); const h=describe(p,day[0]).hidden; addTen(h[h.length-1].ten); });
+  const sipsinCount=Object.entries(sipCounts).map(([name,count])=>({name,count})).sort((a,b)=>b.count-a.count);
+  const monthlyFlow=Array.from({length:12},(_,i)=>{ const m=i+1; const gz=Solar.fromYmdHms(nowKst[0],m,15,12,0,0).getLunar().getMonthInGanZhiExact(); return {month:m,pillar:toKo(gz)}; });
+  const todayGz=Solar.fromYmdHms(nowKst[0],nowKst[1],nowKst[2],12,0,0).getLunar().getDayInGanZhi();
+  const extras={animal:animals[branches.indexOf(yearP?yearP[1]:day[1])]||null, gongmang:gongmangOf(day), sipsinCount, monthlyFlow, year:nowKst[0], today:{date:`${nowKst[0]}-${String(nowKst[1]).padStart(2,'0')}-${String(nowKst[2]).padStart(2,'0')}`, pillar:toKo(todayGz)}};
+  let trueSolar=null;
+  if(input.longitude!==undefined&&input.longitude!==''&&!unknown){
+    const lon=Number(input.longitude);
+    if(!Number.isFinite(lon)||lon<100||lon>150) throw new Error('경도는 100~150 사이의 숫자로 입력해 주세요.');
+    // 균시차: 근사식(오차 약 0.5분). 진태양시 = 표준시 + 4분×(경도−135°) + 균시차.
+    const N=Math.round((Date.UTC(y,m-1,d)-Date.UTC(y,0,1))/86400000)+1, B=2*Math.PI*(N-81)/365;
+    const eot=9.87*Math.sin(2*B)-7.53*Math.cos(B)-1.5*Math.sin(B);
+    const diff=4*(lon-135)+eot;
+    const tot=standard.getUTCHours()*60+standard.getUTCMinutes()+diff, norm=((Math.round(tot)%1440)+1440)%1440;
+    trueSolar={time:String(Math.floor(norm/60)).padStart(2,'0')+':'+String(norm%60).padStart(2,'0'),longitude:lon,diffMinutes:Math.round(diff*10)/10,equationMinutes:Math.round(eot*10)/10};
+  }
+  extras.trueSolar=trueSolar;
+  return { extras, solar:`${y}년 ${m}월 ${d}일`, lunar:`${lunar.year}년 ${lunar.isLeapMonth?'윤':''}${lunar.month}월 ${lunar.day}일`, pillars:pillars.map(p=>p?describe(p,day[0]):null), relations, yearCycles, daeun, warning, standardTime:unknown?null:fmt(standard), adjustedTime:unknown?null:fmt(adjusted), correction, dst:!unknown && (standard.getUTCHours()!==hm[0] || standard.getUTCDate()!==d), boundary:input.dayBoundary };
 }
 module.exports={calculate};

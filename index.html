@@ -54,6 +54,11 @@
           <small>표준시에서 빼는 분입니다. 기본 30분은 관례적인 근사값입니다. 다른 만세력에 표시된 보정값을 직접 입력할 수 있습니다.</small>
         </div>
         <div class="field">
+          <label for="longitude">출생지 경도 <small>선택, 진태양시 참고값</small></label>
+          <input id="longitude" type="number" step="0.01" min="100" max="150" placeholder="예: 126.98 (서울)">
+          <small>입력하면 진태양시와 균시차를 참고값으로 보여 줍니다. 기둥 계산에는 쓰지 않습니다.</small>
+        </div>
+        <div class="field">
           <label for="boundary">밤 11시 이후의 날짜 기준</label>
           <select id="boundary">
             <option value="23">밤 11시부터 다음 날로 계산</option>
@@ -84,6 +89,7 @@
   <footer>이 프로그램은 전통 명리 체계를 이해하기 위한 참고 도구입니다. 사주의 예측력이 과학적으로 입증된 것은 아닙니다.<br>한국 음력: kor-lunar · 절기 계산: lunar-javascript · 출생시간 보정은 직접 설정</footer>
 </main>
 <script src="/reading.js"></script>
+<script src="/fun-reading.js"></script>
 <script src="/app.js"></script>
 </body>
 </html>
