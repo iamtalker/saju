@@ -34,7 +34,7 @@
     },
     식상:{
       신강:'표현하고 만들어 내는 힘이 강해 일을 만들고 말과 글로 드러내는 힘이 큽니다.',
-      신약:'표현하고 만들어 내는 힘은 큰데, 그것을 받아 쥘 힘이 약해 지치기 쉽습니다.',
+      신약:'시작과 아이디어는 많지만 마무리를 혼자 감당하기 어려운 편입니다.',
       갈림:'표현과 생산이 강점이 될 수도, 기운을 소모하는 일이 될 수도 있습니다.'
     },
     재성:{
@@ -121,7 +121,7 @@
     const personalityParts=[DAY_TRAIT[dayChar]];
     if(g.식상>=2) personalityParts.push(`식상이 두드러져 ${outputPolar}이 강합니다.`);
     if(g.관성===0&&g.인성===0) personalityParts.push('관성과 인성이 모두 없어 기존 체계에 기대기보다 독학으로 익히고 스스로 길을 만드는 독학형에 가깝습니다.');
-    personalityParts.push(GROUP_BY_STRENGTH[g.식상>=2?'식상':'비겁'][V]);
+    personalityParts.push(g.식상>=2&&V==='신약'?'말과 행동이 먼저 나가는 편이라 주변에 의욕을 전하는 힘이 있습니다.':GROUP_BY_STRENGTH[g.식상>=2?'식상':'비겁'][V]);
     const personality=personalityParts.join(' ');
     // 강한 십성과 없는 십성 문단
     const strengthParts=[];
@@ -166,7 +166,8 @@
     const POSIDX={연간:0,월간:1,일간:2,시간:3,연지:0,월지:1,일지:2,시지:3};
     const elJudge=el=>el===a.yong?'용':(el===a.bu.희?'희':(a.bu.기.includes(el)?'기':'중'));
     const hapVerdict=el=>{ const j=elJudge(el); return j==='용'||j==='희'?'도움이 더해집니다':j==='기'?'묶여 힘이 줄어듭니다':'영향이 중립입니다'; };
-    const BR_POS_DESC={충:'그 자리가 흔들립니다.',형:'마찰과 조정이 따릅니다.',자형:'마찰과 조정이 따릅니다.',파:'어긋남이 있습니다.',해:'불편과 거리가 생깁니다.',원진:'불편과 거리가 생깁니다.',귀문:'예민함과 몰두가 생깁니다.'};
+    const POS_MEAN={연지:'주변 환경과 사회적 배경',월지:'일과 생활 환경',일지:'가까운 관계와 일상',시지:'개인 계획과 장기 목표'};
+    const BR_POS_DESC={충:'흔들립니다.',형:'마찰과 조정이 따릅니다.',자형:'마찰과 조정이 따릅니다.',파:'어긋납니다.',해:'불편과 거리가 생깁니다.',원진:'불편과 거리가 생깁니다.',귀문:'예민해지고 몰두하게 됩니다.'};
     // 관계 한 줄씩: 천간합은 합화 오행으로, 육합은 합화 오행과 유불리로, 나머지는 관계 종류별 문장으로
     const relNotes=(rels,stemH,branchH)=>{
       const notes=[];
@@ -174,10 +175,21 @@
       rels.filter(x=>x.kind==='천간합').forEach(x=>{ const p=data.pillars[POSIDX[x.pos]]; const el=STEM_HAP_EL[stemH]; if(p&&el) notes.push(`원국 ${x.pos}의 ${KOS2[p.stem]}(${p.stem})${josa(KOS2[p.stem],'과','와')} 합하여 ${el}${josa(el,'으로','로')} 변하니 합의 작용은 ${hapVerdict(el)}.`); });
       const byKind=new Map();
       rels.filter(x=>x.kind!=='천간합'&&!x.others&&!(x.kind==='육합'&&rels.some(y=>y.others))).forEach(x=>{ if(!byKind.has(x.kind)) byKind.set(x.kind,[]); byKind.get(x.kind).push(x.pos); });
-      for(const [kind,poss] of byKind){
+      const hapPoss=byKind.get('육합');
+      if(hapPoss){
+        const poss=[...new Set(hapPoss)]; const meanings=[...new Set(poss.map(p=>POS_MEAN[p]||p))].join(', ');
+        const el=BR_HAP_EL[branchH]; const j=elJudge(el);
+        notes.push(`${meanings}${josa(meanings.slice(-1),'이','가')} 육합으로 묶입니다. 합화 ${el}${josa(el,'이','가')} ${j==='용'||j==='희'?'용·희신이라 유리하게 작용합니다':j==='기'?'기신이라 힘이 줄어듭니다':'중립입니다'}.`);
+        byKind.delete('육합');
+      }
+      // 같은 자리 조합의 관계 종류는 한 문장으로 묶는다
+      const bySet=new Map();
+      for(const [kind,poss] of byKind){ const uniq=[...new Set(poss)]; const key=uniq.join('·'); if(!bySet.has(key)) bySet.set(key,{poss:uniq,kinds:[]}); bySet.get(key).kinds.push(kind); }
+      for(const {poss,kinds} of bySet.values()){
+        const meanings=[...new Set(poss.map(p=>POS_MEAN[p]||p))].join(', ');
         const pos=poss.join('·')+josa(poss[poss.length-1],'과','와');
-        if(kind==='육합'){ const el=BR_HAP_EL[branchH]; const j=elJudge(el); notes.push(`${pos} 육합이 되어 그 자리에 묶입니다. 합화 ${el}${josa(el,'이','가')} ${j==='용'||j==='희'?'용·희신이라 유리하게 작용합니다':j==='기'?'기신이라 힘이 줄어듭니다':'중립입니다'}.`); }
-        else notes.push(`${pos} ${kind}: ${BR_POS_DESC[kind]||'관계가 있습니다.'}`);
+        const effects=[...new Set(kinds.map(k=>BR_POS_DESC[k]||'관계가 있습니다.'))].join(' ');
+        notes.push(`${pos} ${kinds.join('·')}: ${meanings}${josa(meanings.slice(-1),'이','가')} ${effects}`);
       }
       return notes;
     };
