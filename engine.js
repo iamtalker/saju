@@ -72,7 +72,8 @@ function calculateCore(input) {
   const branchHapPairs={'子':'丑','丑':'子','寅':'亥','亥':'寅','卯':'戌','戌':'卯','辰':'酉','酉':'辰','巳':'申','申':'巳','午':'未','未':'午'};
   const branchXingPairs={'寅':'巳','巳':'申','申':'寅','丑':'戌','戌':'未','未':'丑','子':'卯','卯':'子'};
   const posStem=['연간','월간','일간','시간'], posBranch=['연지','월지','일지','시지'];
-  const cycleRelations=(stem,branch)=>{ const out={stemHap:[],hap:[],xing:[]}; pillars.forEach((p,i)=>{ if(!p) return; if(stemHapPairs[stem]===p[0]) out.stemHap.push(posStem[i]); if(branchHapPairs[branch]===p[1]) out.hap.push(posBranch[i]); if(branchXingPairs[branch]===p[1]) out.xing.push(posBranch[i]); }); return out; };
+  const selfXing=['辰','午','酉','亥'];
+  const cycleRelations=(stem,branch)=>{ const out={stemHap:[],hap:[],xing:[],self:[]}; pillars.forEach((p,i)=>{ if(!p) return; if(stemHapPairs[stem]===p[0]) out.stemHap.push(posStem[i]); if(branchHapPairs[branch]===p[1]) out.hap.push(posBranch[i]); if(branchXingPairs[branch]===p[1]) out.xing.push(posBranch[i]); if(branch===p[1]&&selfXing.includes(branch)) out.self.push(posBranch[i]); }); return out; };
   const yearCycles=[];
   const clashes={子:'午',丑:'未',寅:'申',卯:'酉',辰:'戌',巳:'亥',午:'子',未:'丑',申:'寅',酉:'卯',戌:'辰',亥:'巳'};
   const currentYear=new Date().getFullYear();
@@ -190,11 +191,11 @@ function withBoundary(input, r){
   if(!reasons.length) return r;
   const alternatives=[];
   const other=input.dayBoundary==='23'?'00':'23';
-  const otherLabel=other==='00'?'자정 전환(정자시 계열)':'밤 11시 전환(야자시 계열)';
+  const otherLabel=other==='00'?'자정으로':'밤 11시로';
   const options=[
-    {label:'일주 경계를 '+otherLabel+'로 바꾸었을 때',opts:{dayBoundary:other}},
+    {label:'날짜 전환을 '+otherLabel+' 했을 때',opts:{dayBoundary:other}},
     {label:'보정 0분일 때',opts:{correction:0}},
-    {label:'보정 0분에 '+otherLabel+'로 바꾸었을 때',opts:{correction:0,dayBoundary:other}}
+    {label:'보정 0분이고 날짜 전환을 '+otherLabel+' 했을 때',opts:{correction:0,dayBoundary:other}}
   ];
   const seen=new Set([pillarKey(r)]);
   for(const o of options){ const alt=calculateCore({...input,...o.opts}); const key=pillarKey(alt); if(seen.has(key)) continue; seen.add(key); alternatives.push({label:o.label,pillars:alt.pillars.map(p=>p?p.hangul:null)}); }

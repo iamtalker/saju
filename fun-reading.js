@@ -61,18 +61,31 @@
     const cheonEul=CHEON_EUL[dayHanja]||[];
     p.forEach((x,i)=>{ if(!x) return; if(cheonEul.includes(x.branch)) guiin.push(['연주','월주','일주','시주'][i]); });
     const monthly=(data.extras&&data.extras.monthlyFlow)||[];
-    const goodMonths=monthly.filter(m=>{ const s=koToHanja(m.pillar); const t=s?sipsinOf(dayHanja,s):null; return t==='편재'||t==='정재'||t==='정관'; }).map(m=>m.month+'월');
+    const sv=data.strength&&data.strength.verdict;
+    const wantSet=sv==='신약'?['비견','겁재','편인','정인']:sv==='신강'?['편재','정재','편관','정관']:null;
+    const goodMonths=wantSet?monthly.filter(m=>{ const s=koToHanja(m.pillar); const t=s?sipsinOf(dayHanja,s):null; return wantSet.includes(t); }).map(m=>m.month+'월'):[];
+    const monthNote=sv==='신약'?'일간이 약한 편이라 인성·비겁이 오는 달을 살펴볼 만하다고 볼 수 있습니다.':sv==='신강'?'일간이 강한 편이라 재성·관성이 오는 달을 살펴볼 만하다고 볼 수 있습니다.':'신강·신약 판정이 갈려 달을 구분하지 않습니다.';
+    const ELEM={甲:'목',乙:'목',丙:'화',丁:'화',戊:'토',己:'토',庚:'금',辛:'금',壬:'수',癸:'수'};
+    const dy=data.daeun;
+    const birthYear=parseInt(String(data.solar||'').split('년')[0],10);
+    const nowYear=Number((data.extras&&data.extras.year)||new Date().getFullYear());
+    const ageNow=nowYear-birthYear;
+    const curCycle=dy&&dy.available&&Number.isFinite(ageNow)?dy.cycles.find(c=>ageNow*12>=c.fromAgeMonths&&ageNow*12<c.toAgeMonths):null;
+    const daeunLine=curCycle?(()=>{ const el=ELEM[curCycle.pillar[0]]; const count=p.reduce((n,x)=>n+(x?(x.stemElement===el?1:0)+(x.branchElement===el?1:0):0),0); const from=Math.floor(curCycle.fromAgeMonths/12), to=Math.floor(curCycle.toAgeMonths/12); return `지금 대운 ${curCycle.pillar}(만 ${from}~${to}세)의 천간은 ${el} 기운입니다. ${count?`원국에 ${el} 기운이 ${count}개 있습니다.`:`원국에는 ${el} 기운이 없어, 이 대운에서 새로 들어오는 기운이라고 볼 수 있습니다.`}`; })():(dy&&dy.alternatives?'성별을 고르면 현재 대운을 하나로 정할 수 있습니다.':'대운 정보가 없습니다.');
     const careerNote=CAREER_NOTE[Math.min(2,career)];
     const traitLine=DAY_TRAIT[dayHanja]||'';
-    const summary=traitLine+' '+wealthNote;
+    const wealthVerdict=(wealth>=1&&sv==='신약')?' 재성은 있으나 일간이 약해 재성을 감당하는 것이 과제라고 볼 수 있습니다.':(wealth>=1&&sv==='신강')?' 일간이 강해 재성을 다룰 힘이 있는 편이라고 볼 수 있습니다.':'';
+    const wealthFull=wealthNote+wealthVerdict;
+    const summary=traitLine+' '+wealthFull;
     const section=(title,body)=>`<div class="theme"><b>${title}</b><p>${body}</p></div>`;
     return `<article id="reading-fun-all" class="reading-card"><span>성격·재물·연애 요약</span><h3>원국에서 보이는 성향</h3>`
       + section('결론 한 줄', summary)
       + section('성격', traitLine)
-      + section('재물', wealthNote)
+      + section('재물', wealthFull)
       + section('연애', loveLine||'일지 정보가 없습니다.')
       + section('직업 성향', careerNote)
-      + section('올해 좋은 달', goodMonths.length?goodMonths.join(' · ')+'. 재성이나 정관이 보이는 달입니다.':'재성이나 정관이 보이는 달이 없습니다.')
+      + section('올해 좋은 달', (goodMonths.length?goodMonths.join(' · ')+'. ':'해당하는 달이 없습니다. ')+monthNote)
+      + section('대운', daeunLine)
       + section('귀인 (관례)', guiin.length?`천을귀인이 ${guiin.join('·')}에 보입니다. 관례상의 표식입니다.`:'천을귀인 표식이 보이지 않습니다.')
       + `</article>`;
   }
