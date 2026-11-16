@@ -35,6 +35,33 @@
   const twelveStarts='亥午寅酉寅酉巳子申卯';
   const branches='子丑寅卯辰巳午未申酉戌亥';
   const pillarGuides=['태어난 해의 배경을 보는 자리','태어난 달과 계절 환경을 보는 자리','나를 나타내는 일간과 중심 관계를 보는 자리','태어난 시간과 이후의 관심사를 보는 자리'];
+  const shinsalGroups=[
+    {name:'도화살',targets:['酉','卯','午','子'],meaning:'전통적으로 표현력과 사람들의 시선을 끄는 상징으로 풀이합니다.'},
+    {name:'역마살',targets:['寅','申','亥','巳'],meaning:'전통적으로 이동과 변화, 활동 반경의 상징으로 풀이합니다.'},
+    {name:'화개살',targets:['辰','戌','丑','未'],meaning:'전통적으로 몰입과 사색, 배움의 상징으로 풀이합니다.'}
+  ];
+  const groupFor={申子辰:0,寅午戌:1,巳酉丑:2,亥卯未:3};
+  function findShinsal(pillars){
+    const found=[];
+    for(const rule of shinsalGroups){
+      const matches=[];
+      for(const baseIndex of [0,2]){
+        const base=pillars[baseIndex];if(!base)continue;
+        const group=Object.entries(groupFor).find(([set])=>set.includes(base.branch))?.[1];if(group===undefined)continue;
+        const target=rule.targets[group];
+        const positions=pillars.map((p,i)=>p?.branch===target?['연지','월지','일지','시지'][i]:null).filter(Boolean);
+        if(positions.length)matches.push({기준:baseIndex===0?'년지':'일지',대상지지:target,위치:positions});
+      }
+      if(matches.length)found.push({...rule,matches});
+    }
+    const month=pillars[1];
+    if(month){
+      const i=branches.indexOf(month.branch),target=branches[(i+11)%12];
+      const positions=pillars.map((p,n)=>n!==1&&p?.branch===target?['연지','월지','일지','시지'][n]:null).filter(Boolean);
+      if(positions.length)found.push({name:'천의성',meaning:'월지에서 한 칸 앞선 지지를 찾는 현대식 표의 결과입니다. 고전의 천의 기준과 다를 수 있으며 건강·직업을 판단하는 근거가 아닙니다.',matches:[{기준:`월지 ${month.branch}`,대상지지:target,위치:positions}]});
+    }
+    return found;
+  }
   function create(data){
     const pillars=data.pillars,day=pillars[2],known=pillars.filter(Boolean),counts=Object.fromEntries(Object.keys(elementText).map(x=>[x,0]));
     known.forEach(p=>{counts[p.stemElement]++;counts[p.branchElement]++;});
@@ -45,7 +72,7 @@
     const month=pillars[1];
     const dayIndex=day?'甲乙丙丁戊己庚辛壬癸'.indexOf(day.stem):-1;
     const twelve=dayIndex<0?null:pillars.map(p=>{if(!p)return null;const start=branches.indexOf(twelveStarts[dayIndex]);const branch=branches.indexOf(p.branch);const step=dayIndex%2===0?branch-start:start-branch;return twelveNames[(step+12)%12];});
-    return {day:day?{name:day.hangul[0],hanja:day.stem,element:day.stemElement,polarity:day.stemYin,metaphor:stems[day.stem][0],image:stems[day.stem][1],theme:stems[day.stem][2]}:null,season:month?{branch:month.hangul[1],element:month.branchElement,ten:month.hidden.map(x=>x.ten)}:null,pillarGuides,twelve,counts,knownCount:known.length*2,prominent,missing,elementText,tenThemes:[...groups].map(([name,positions])=>({name,positions,title:ten[name][0],meaning:ten[name][1],suggestion:ten[name][2]})),hiddenThemes:[...hiddenGroups].map(([name,positions])=>({name,title:tenText[name][0],meaning:tenText[name][1],positions})),relations:data.relations,partial:known.length<4};
+    return {day:day?{name:day.hangul[0],hanja:day.stem,element:day.stemElement,polarity:day.stemYin,metaphor:stems[day.stem][0],image:stems[day.stem][1],theme:stems[day.stem][2]}:null,season:month?{branch:month.hangul[1],element:month.branchElement,ten:month.hidden.map(x=>x.ten)}:null,pillarGuides,twelve,shinsal:findShinsal(pillars),counts,knownCount:known.length*2,prominent,missing,elementText,tenThemes:[...groups].map(([name,positions])=>({name,positions,title:ten[name][0],meaning:ten[name][1],suggestion:ten[name][2]})),hiddenThemes:[...hiddenGroups].map(([name,positions])=>({name,title:tenText[name][0],meaning:ten[name][1],positions})),relations:data.relations,partial:known.length<4};
   }
   return {create};
 });

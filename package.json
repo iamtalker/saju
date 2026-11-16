@@ -2,5 +2,11 @@
   "dependencies": {
     "kor-lunar": "^1.7.0",
     "lunar-javascript": "^1.7.8"
+  },
+  "devDependencies": {
+    "@fullstackfamily/manseryeok": "^1.0.8"
+  },
+  "scripts": {
+    "verify:manseryeok": "node 검증/manseryeok_대조.js"
   }
 }

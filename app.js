@@ -107,7 +107,9 @@ function renderReadingToc(reading){
     ['reading-season','태어난 달 · 월지',Boolean(reading.season)],
     ['reading-ten','천간 십성',Boolean(reading.day)],
     ['reading-hidden','지장간 십성',Boolean(reading.day)],
-    ['reading-relations','글자 사이의 관계',true]
+    ['reading-relations','글자 사이의 관계',true],
+    ['reading-shinsal','신살 표식',true],
+    ['reading-years','앞으로 12년의 세운 관계',true]
   ].filter(item=>item[2]);
   return `<nav class="reading-toc" aria-label="풀이 목차"><strong>풀이 목차</strong><ol>${toc.map(([id,label])=>`<li><a href="#${id}">${label}</a></li>`).join('')}</ol></nav>`;
 }
@@ -126,7 +128,13 @@ function renderReading(data,reading){
   const hiddenCard=reading.day?`<article id="reading-hidden" class="reading-card"><span>지지 안에 숨은 천간 · 지장간 십성</span><h3>겉글자 아래 함께 보는 주제</h3>${hiddenThemes}<p class="reading-note">지장간의 배열만 표시합니다. 계절에 따른 사령·가중치와 작용력은 적용하지 않았습니다.</p></article>`:'';
   const relations=data.relations.length?data.relations.map(r=>`${r.positions}의 ${r.characters} ${r.name}${r.element?`(${r.element})`:''}${r.complete===false?` 부분 조합이며 ${r.missing.join('·')}이 빠져 있습니다`:''}`).join('. ')+'.':'확정된 글자에서 표시 대상 관계가 발견되지 않았습니다.';
   const relationCard=`<article id="reading-relations" class="reading-card"><span>글자 사이의 관계</span><h3>합과 충 살펴보기</h3><p>${relations} 관계 후보를 찾았다는 사실만으로 합화나 실제 사건·길흉을 결정하지 않습니다.</p></article>`;
-  return `<section class="reading"><div class="section-label">03 · 사주 풀이</div><h2>나의 사주 읽어보기</h2><p class="reading-intro">전통 명리의 상징을 바탕으로 원국의 글자를 풀어봅니다. ${reading.partial?'확정된 기둥만 살펴본 부분 풀이입니다.':'태어난 시각까지 포함한 여덟 글자를 살펴봅니다.'}</p><article id="reading-pillars" class="reading-card"><span>네 기둥의 자리와 십이운성</span>${pillarGuide}<p class="reading-note">십이운성은 화토동궁, 양간 순행·음간 역행 기준입니다. 전통적 분류이며 실제 생애 사건을 뜻하지 않습니다.</p></article>${dayHtml}${elementCard}${seasonCard}${tenCard}${hiddenCard}${relationCard}<p class="reading-note">이 풀이는 전통 명리의 상징적 분류를 설명합니다. 실제 성격이나 미래를 확인해 주는 결과가 아니며, 지장간 가중치·신강·신약, 격국·용신, 대운을 종합한 전문 간명은 포함하지 않습니다.</p></section>`;
+  const shinsal=reading.shinsal.length?reading.shinsal.map(s=>`<div class="theme"><b>${s.name} · ${s.matches.map(m=>`${m.기준} 기준 ${m.대상지지}(${m.위치.join('·')})`).join(' / ')}</b><p>${s.meaning}</p></div>`).join(''):'확정된 기둥에서 이 기준표의 표식을 찾지 못했습니다.';
+  const shinsalCard=`<article id="reading-shinsal" class="reading-card"><span>전통 신살 표식 · 기준을 공개합니다</span><h3>도화·역마·화개·천의성</h3>${shinsal}<p class="reading-note">도화·역마·화개는 년지와 일지의 삼합 그룹을 기준으로, 천의성은 월지에서 한 칸 앞선 지지를 보는 현대식 표를 적용했습니다. 신살은 보조 분류이며 개수로 길흉이나 실제 사건을 예측하지 않습니다.</p></article>`;
+  const positionTopics={연지:'주변 환경과 사회적 배경',월지:'일과 생활 환경',일지:'가까운 관계와 일상',시지:'개인 계획과 장기 목표'};
+  const years=Array.isArray(data.yearCycles)?data.yearCycles.filter(y=>y.natalPositions.length):[];
+  const yearItems=years.length?years.map(y=>`<div class="theme"><b>${y.year}년 · ${y.pillar}년 · 만 ${y.ageBeforeBirthday}~${y.ageAfterBirthday}세</b><small>${y.natalPositions.join('·')}와 지지 충</small><p>세운의 지지 ${y.branch}와 원국의 ${y.natalPositions.join('·')}가 충 관계입니다. 전통적인 자리 해석을 참고한다면 ${y.natalPositions.map(p=>positionTopics[p]).join('·')}에서 변화가 있을 때 일정과 대화를 여유 있게 점검해 볼 수 있습니다. 이 관계만으로 사건이 생긴다고 볼 수는 없습니다.</p></div>`).join(''):'앞으로 12년 동안 세운 지지가 원국 지지와 충을 이루는 해가 없습니다.';
+  const yearCard=`<article id="reading-years" class="reading-card"><span>세운의 지지와 원국의 충 관계</span><h3>앞으로 12년 중 점검해 볼 관계</h3>${yearItems}<p class="reading-note">나이는 해당 연도의 생일 전 만 나이부터 생일 후 만 나이까지입니다. 연도별 간지는 입춘 이후 기준으로 계산했습니다. 충은 전통적 관계 표식일 뿐 사고·질병·이별을 예고하지 않으며, 대운·월운·일진은 포함하지 않습니다.</p></article>`;
+  return `<section class="reading"><div class="section-label">03 · 사주 풀이</div><h2>나의 사주 읽어보기</h2><p class="reading-intro">전통 명리의 상징을 바탕으로 원국의 글자를 풀어봅니다. ${reading.partial?'확정된 기둥만 살펴본 부분 풀이입니다.':'태어난 시각까지 포함한 여덟 글자를 살펴봅니다.'}</p><article id="reading-pillars" class="reading-card"><span>네 기둥의 자리와 십이운성</span>${pillarGuide}<p class="reading-note">십이운성은 화토동궁, 양간 순행·음간 역행 기준입니다. 전통적 분류이며 실제 생애 사건을 뜻하지 않습니다.</p></article>${dayHtml}${elementCard}${seasonCard}${tenCard}${hiddenCard}${relationCard}${shinsalCard}${yearCard}<p class="reading-note">이 풀이는 전통 명리의 상징적 분류를 설명합니다. 실제 성격이나 미래를 확인해 주는 결과가 아니며, 지장간 가중치·신강·신약, 격국·용신, 대운을 종합한 전문 간명은 포함하지 않습니다.</p></section>`;
 }
 function renderMarkdown(data,reading){
   const lines=['# 사주 풀이','',`양력: ${data.solar}`,`음력: ${data.lunar}`,'','## 네 기둥','', '| 기둥 | 간지 | 십성 |','|---|---|---|'];
@@ -142,6 +150,9 @@ function renderMarkdown(data,reading){
   if(reading.tenThemes.length)lines.push('','## 천간 십성','',...reading.tenThemes.map(t=>`- **${t.name} (${t.positions.join('·')})**: ${t.meaning}. ${t.suggestion}`));
   if(reading.hiddenThemes.length)lines.push('','## 지장간 십성','',...reading.hiddenThemes.map(t=>`- **${t.name}** — ${t.positions.map(p=>`${p.position}: ${p.characters.join('·')}`).join(' / ')}: ${t.meaning}.`));
   lines.push('','## 글자 사이의 관계','',reading.relations.length?reading.relations.map(r=>`- ${r.positions}: ${r.characters} ${r.name}${r.element?`(${r.element})`:''}${r.complete===false?` 부분 조합, 빠진 글자 ${r.missing.join('·')}`:''}`).join('\n'):'확정된 기둥에서 표시 대상 관계가 발견되지 않았습니다.');
+  lines.push('','## 신살 표식','',reading.shinsal.length?reading.shinsal.map(s=>`- **${s.name}**: ${s.matches.map(m=>`${m.기준} 기준 ${m.대상지지} (${m.위치.join('·')})`).join(' / ')} — ${s.meaning}`).join('\n'):'이 기준표에서 발견한 표식이 없습니다.');
+  const years=(data.yearCycles||[]).filter(y=>y.natalPositions.length);
+  lines.push('','## 앞으로 12년의 세운 관계','',years.length?years.map(y=>`- **${y.year}년 ${y.pillar}년 (만 ${y.ageBeforeBirthday}~${y.ageAfterBirthday}세)**: 세운 ${y.branch}와 원국 ${y.natalPositions.join('·')}의 지지 충`).join('\n'):'앞으로 12년 동안 원국 지지와 충을 이루는 세운이 없습니다.','', '세운의 충은 전통적 관계 표식이며 사고·질병·이별을 예고하지 않습니다. 대운·월운·일진은 포함하지 않습니다.');
   lines.push('','## 계산 기준','',`- 출생시간 보정: ${data.correction}분`, `- 일주 경계: ${data.boundary==='23'?'밤 11시':'자정'}`,`- 십이운성: 화토동궁, 양간 순행·음간 역행`,`- 시간 미상 여부: ${data.pillars[3]?'아니요':'예'}`,'','이 결과는 전통 명리의 상징적 분류를 설명합니다. 실제 성격이나 미래를 입증하는 결과가 아니며, 강약·용신·대운 종합 해석은 포함하지 않습니다.','');
   return lines.join('\n');
 }
