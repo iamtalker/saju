@@ -217,9 +217,7 @@
     const yNow=a.years.find(y=>y.year===nowYear), yNext=a.years.find(y=>y.year===nowYear+1);
     const yearDetail=[yNow,yNext].filter(Boolean).map(y=>{
       const parts=[yearLine(y)];
-      if(y.stem==='용신'||y.stem==='희신') parts.push('천간이 용신이나 희신이라 드러나는 힘이 원국에 도움이 됩니다.');
       if(y.branch==='기신'||y.stem==='기신') parts.push('기신이 들어와 부담이 커지는 해입니다.');
-      if(y.rels.some(x=>x.kind==='충')) parts.push('원국과 충이 있어 그 자리의 일정과 관계가 흔들리기 쉽습니다.');
       return parts.join(' ');
     }).join('<br>');
     const yearRest=a.years.filter(y=>y!==yNow&&y!==yNext).map(y=>{ const rel=relNotes(y.rels,y.pillar[0],y.pillar[1]).join(' '); return `${y.year}년 ${y.pillar}: 천간 ${KOS2[y.pillar[0]]}(${y.pillar[0]})${josa(KOS2[y.pillar[0]],'은','는')} ${judgeText(y.stem)}, 지지 ${KOB[y.pillar[1]]}(${y.pillar[1]})${josa(KOB[y.pillar[1]],'은','는')} ${judgeText(y.branch)}입니다.${rel?' '+rel:' 원국과 충·합·형 관계가 없습니다.'}${y.gm?' 지지가 공망입니다.':''} ${conclFor(y)}`; }).join('<br>');
