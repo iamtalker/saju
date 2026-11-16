@@ -118,7 +118,7 @@ const MISSING={
       structure,
       `일간의 강약은 ${verdict}입니다. 득령·득지·득세 가운데 ${a.strength.hits}개가 충족됩니다.`,
       `격국은 ${gg.name}이며, ${gg.exposed?'월지의 십성이 천간에 드러나 있습니다':'천간에는 드러나 있지 않습니다'}.`,
-      a.status==='갈림'?'용신은 하나로 정하지 않습니다.':`용신은 ${yongEl}이고, 희신은 ${a.bu.희}, 기신은 ${a.bu.기.join('·')}입니다.`,
+      a.status==='갈림'?'용신은 하나로 정하지 않습니다.':`용신은 ${yongEl}이고, 희신은 ${a.bu.희}, 기신은 ${a.bu.기.join('·')}${a.bu.한?`, 한신은 ${a.bu.한}`:''}입니다.`,
       hidSentence,
       a.note||'',
       a.jong.wealth?`이 풀이의 대운·세운·월운은 정격(용신 ${yongEl||'없음'}) 기준이며, 종재격은 참고 견해입니다.`:''
@@ -219,8 +219,8 @@ const MISSING={
       for(const {poss,kinds} of bySet.values()){
         const meanings=[...new Set(poss.map(p=>POS_MEAN[p]||p))].join(', ');
         const pos=poss.join('·')+josa(poss[poss.length-1],'과','와');
-        const effects=[...new Set(kinds.map(k=>BR_POS_DESC[k]||'관계가 있습니다.'))].join(' ');
-        notes.push(`${pos} ${kinds.join('·')}: ${meanings}${josa(meanings.slice(-1),'이','가')} ${effects}`);
+        const groups=new Map(); kinds.forEach(k=>{ const e=BR_POS_DESC[k]||'관계가 있습니다.'; if(!groups.has(e)) groups.set(e,[]); groups.get(e).push(k); });
+        for(const [e,ks] of groups){ const particle=/^(마찰|불편|예민)/.test(e)?'에':josa(meanings.slice(-1),'이','가'); notes.push(`${pos} ${ks.join('·')}: ${meanings}${particle} ${e}`); }
       }
       return notes;
     };
@@ -230,7 +230,7 @@ const MISSING={
       const stemUseful=c.stem==='용신'||c.stem==='희신', branchUseful=c.branch==='용신'||c.branch==='희신';
       const clashBranch=c.rels.some(x=>x.kind==='충');
       const hapToKi=c.rels.some(x=>x.kind==='육합'&&BRE_HAP[c.pillar[1]]===monthBrEl&&elJudge(BRE_HAP[c.pillar[1]])==='기');
-      if(c.stem==='기신'&&(c.branch==='중립'||hapToKi)){ const why=[c.branch==='중립'?'지지가 중립이고':null,hapToKi?'합화가 기신 쪽이라':null].filter(Boolean).join(' '); return `천간이 기신이고 ${why} 주의하는 시기입니다.`; }
+      if(c.stem==='기신'&&(c.branch==='중립'||hapToKi)){ const why=c.branch==='중립'&&hapToKi?'지지가 중립이고 합화가 기신 쪽이라':c.branch==='중립'?'지지가 중립이라':'합화가 기신 쪽이라'; return `천간이 기신이고 ${why} 주의하는 시기입니다.`; }
       if(c.branch==='용신'&&clashBranch) return '용신이 강하게 들어오지만 충으로 크게 흔들리는 시기입니다.';
       if(branchUseful&&stemUseful) return '천간과 지지가 모두 받쳐 주는 가장 좋은 시기입니다.';
       if(branchUseful) return '천간의 도움은 약해도 지지라는 바탕이 받쳐 주는 시기입니다.';
