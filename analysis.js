@@ -87,7 +87,7 @@
     else { yong=bu.용; if(johu&&johu===bu.용) note='조후와 억부가 같은 오행을 가리킵니다.'; }
     const wealthEl=controls(dayEl), outputEl=produces(dayEl), officerEl=controlledBy(dayEl), supportEl=producedBy(dayEl);
     if(jong.possible&&jong.wealth) note+=' 재성이 많고 일간이 약해, 종재격으로 보는 견해도 있습니다. 그 경우 용신은 재성·식상 쪽으로 바뀝니다.';
-    else if(jong.possible) note+=' 비겁·인성이 지장간에만 있어, 종격으로 보는 견해도 있습니다. 그 경우 용신이 반대가 됩니다.';
+    else if(jong.possible) note+=' 일간의 뿌리가 지장간에만 있어, 종격으로 보는 견해도 있습니다. 그 경우 용신이 반대가 됩니다.';
 
     // 원국 내부 관계(형·파·해·원진·귀문)
     const natalBranches=r.pillars.filter(Boolean).map((p,i)=>({b:p.branch,pos:['연지','월지','일지','시지'][r.pillars.indexOf(p)]}));

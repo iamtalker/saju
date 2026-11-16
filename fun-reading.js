@@ -129,7 +129,7 @@ const MISSING={
     const outputPolar=(ten['상관']||0)>=(ten['식신']||0)&&(ten['상관']||0)>0?'기존 방식을 따져 보고 스스로 다시 만드는 힘':'꾸준히 만들고 가꾸는 힘';
     const personalityParts=[DAY_TRAIT[dayChar]];
     if(g.식상>=2) personalityParts.push(`식상이 두드러져 ${outputPolar}이 강합니다.`);
-    if(g.관성===0&&g.인성===0) personalityParts.push('관성과 인성이 모두 없어 기존 체계에 기대기보다 독학으로 익히고 스스로 길을 만드는 독학형에 가깝습니다.');
+    if(g.관성===0&&g.인성===0) personalityParts.push('겉으로 드러난 관성과 인성이 없어 기존 체계에 기대기보다 독학으로 익히고 스스로 길을 만드는 독학형에 가깝습니다.');
     personalityParts.push(g.식상>=2&&V==='신약'?'말과 행동이 먼저 나가는 편이라 주변에 의욕을 전하는 힘이 있습니다.':GROUP_BY_STRENGTH[g.식상>=2?'식상':'비겁'][V]);
     const personality=personalityParts.join(' ');
     // 강한 십성과 없는 십성 문단
