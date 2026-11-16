@@ -179,15 +179,20 @@
       }
       return notes;
     };
+    const BR_EL_MAP={子:'수',丑:'토',寅:'목',卯:'목',辰:'토',巳:'화',午:'화',未:'토',申:'금',酉:'금',戌:'토',亥:'수'};
     const cycleText=c=>{
       const s1=`${c.pillar}(만 ${c.fromAge}~${c.toAge}세) 대운은 천간 ${stemLabel(c.pillar[0])}${josa(KOS2[c.pillar[0]],'은','는')} ${judgeText(c.stem)}, 지지 ${branchLabel(c.pillar[1])}${josa(KOB[c.pillar[1]],'은','는')} ${judgeText(c.branch)}입니다.`;
       const notes=relNotes(c.rels,c.pillar[0],c.pillar[1]);
       const stemUseful=c.stem==='용신'||c.stem==='희신', branchUseful=c.branch==='용신'||c.branch==='희신';
-      const concl=branchUseful&&stemUseful?'천간과 지지가 모두 받쳐 주는 가장 좋은 시기입니다.':branchUseful?'천간의 도움은 약해도 지지라는 바탕이 받쳐 주는 시기입니다.':stemUseful?'드러나는 도움은 있으나 지지의 바탕이 약한 시기입니다.':(c.stem==='기신'&&c.branch==='기신')?'천간과 지지가 모두 기신이라 주의하는 시기입니다.':'큰 힘이 두드러지지 않는 시기입니다.';
+      const branchEl=BR_EL_MAP[c.pillar[1]];
+      const rootNote=branchEl===dayEl?`지지 ${branchLabel(c.pillar[1])}${josa(KOB[c.pillar[1]],'은','는')} 일간과 같은 ${dayEl}이라 일간에 뿌리가 생깁니다.`:'';
+      const clashBranch=c.rels.some(x=>x.kind==='충');
+      const hapToKi=c.rels.some(x=>x.kind==='육합'&&elJudge(BR_HAP_EL[c.pillar[1]])==='기');
+      const concl=(c.stem==='기신'&&(c.branch==='중립'||hapToKi))?'천간이 기신이고 지지가 중립이거나 합화로 기신 쪽이 되어 주의하는 시기입니다.':(c.branch==='용신'&&clashBranch)?'용신이 강하게 들어오지만 충으로 크게 흔들리는 시기입니다.':branchUseful&&stemUseful?'천간과 지지가 모두 받쳐 주는 가장 좋은 시기입니다.':branchUseful?'천간의 도움은 약해도 지지라는 바탕이 받쳐 주는 시기입니다.':stemUseful?'드러나는 도움은 있으나 지지의 바탕이 약한 시기입니다.':(c.stem==='기신'&&c.branch==='기신')?'천간과 지지가 모두 기신이라 주의하는 시기입니다.':'큰 힘이 두드러지지 않는 시기입니다.';
       const hid=(HIDDEN[c.pillar[1]]||'').split('').map(h=>({h,el:ELEM_OF[h]}));
       const yongEl=a.yong;
       const storeText=((c.stem==='희신'||c.stem==='용신'||c.branch==='희신'||c.branch==='용신')&&hid.some(h=>h.el===yongEl)&&!data.pillars.some(p=>p&&(p.stemElement===yongEl||p.branchElement===yongEl)))?`지지 ${branchLabel(c.pillar[1])} 속의 ${hid.find(h=>h.el===yongEl).h}(${yongEl})${josa(yongEl,'이','가')} 원국에 없던 기운을 들여옵니다.`:'';
-      return [s1,...notes,storeText,concl+(c.gm?' 지지가 공망이라 기운이 비는 자리입니다.':'')].filter(Boolean).join(' ');
+      return [s1,...notes,rootNote,storeText,concl+(c.gm?' 지지가 공망이라 기운이 비는 자리입니다.':'')].filter(Boolean).join(' ');
     };
     const cycleLines=a.cycles.map(cycleText);
     const nowAge=Number(data.extras.year)-parseInt(String(data.solar).split('년')[0],10);
