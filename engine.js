@@ -1,3 +1,4 @@
+const SajuAnalysis=require('./analysis');
 const { Solar } = require('lunar-javascript');
 const { toLunar, toSolar, LunarCalendar } = require('kor-lunar');
 
@@ -182,8 +183,9 @@ function nearBoundary(input, standardText, instantMs){
 const pillarKey=r=>r.pillars.map(p=>p?p.hangul:'-').join(' ');
 function calculate(input){
   const r=calculateCore(input);
-  if(input.unknown) return r;
-  return withBoundary(input, r);
+  const out=input.unknown?r:withBoundary(input, r);
+  try{ out.analysis=SajuAnalysis.analyze(out); }catch(error){ out.analysis=null; }
+  return out;
 }
 function withBoundary(input, r){
   if(!r.standardTime) return r;
