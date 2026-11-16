@@ -54,7 +54,8 @@
     }
   };
   // 없는 십성 문장
-  const MISSING={
+  const MISSING_REST={인성:'후원, 스승, 학력의 덕이 약하고 독학으로 익히는 편입니다.',관성:'조직, 지위, 윗사람과의 인연이 약하고 독립적으로 움직이는 편입니다.',비겁:'자기편을 세우기 어렵고 협력자가 적은 편입니다.',식상:'표현과 생산의 통로가 약해 속으로 쌓아 두기 쉽습니다.',재성:'재물을 직접 다루는 힘이 약하고, 다른 경로로 얻는 편입니다.'};
+const MISSING={
     인성:'인성이 없어 후원, 스승, 학력의 덕이 약하고 독학으로 익히는 편입니다.',
     관성:'관성이 없어 조직, 지위, 윗사람과의 인연이 약하고 독립적으로 움직이는 편입니다.',
     비겁:'비겁이 없어 자기편을 세우기 어렵고 협력자가 적은 편입니다.',
@@ -106,11 +107,19 @@
     const surround=excess.filter(e=>e!==dayEl).slice(0,2).join('·');
     const seasonWord=a.season==='겨울'?'한겨울':a.season;
     const structure=`${seasonWord}에 태어나 ${surround?surround+' 기운에 둘러싸인 ':''}${verdict==='신약'?'약한 ':verdict==='신강'?'강한 ':''}${dayEl}(${dayChar})이고, ${g.식상>=2&&V==='신약'?'표현하고 만들어 내는 힘은 큰데 그것을 받아 쥘 힘이 약하며':V==='신강'?'스스로 힘을 쓸 수 있으며':'힘의 균형이 맞지 않으며'}${a.yong&&!yongInNatal?`, 필요한 ${yongEl}가 원국에 없습니다.`:'.'}`;
+    // 지장간 여부: 겉으로 드러난 십성과 지장간에만 있는 십성을 가른다
+    const visibleG=new Set(Object.keys(g).filter(k=>g[k]>0));
+    const hiddenG=new Set(); data.pillars.forEach(p=>{ if(!p||!p.hidden) return; p.hidden.slice(0,-1).forEach(h=>{ if(GROUP_OF[h.ten]) hiddenG.add(GROUP_OF[h.ten]); }); });
+    const hiddenOnly=[...hiddenG].filter(k=>!visibleG.has(k));
+    const absentG=['비겁','식상','재성','관성','인성'].filter(k=>!visibleG.has(k)&&!hiddenG.has(k));
+    const listJo=arr=>arr.length===2?`${arr[0]}과 ${arr[1]}`:arr.join('·');
+    const hidSentence=hiddenOnly.length||absentG.length?`${hiddenOnly.length?listJo(hiddenOnly)+josa(hiddenOnly[hiddenOnly.length-1],'은','는')+' 지장간에만 있고 ':''}${absentG.length?absentG.join('·')+josa(absentG[absentG.length-1],'은','는')+' 원국에 없습니다.':''}`.trim():'';
     const summaryParts=[
       structure,
       `일간의 강약은 ${verdict}입니다. 득령·득지·득세 가운데 ${a.strength.hits}개가 충족됩니다.`,
       `격국은 ${gg.name}이며, ${gg.exposed?'월지의 십성이 천간에 드러나 있습니다':'천간에는 드러나 있지 않습니다'}.`,
       a.status==='갈림'?'용신은 하나로 정하지 않습니다.':`용신은 ${yongEl}이고, 희신은 ${a.bu.희}, 기신은 ${a.bu.기.join('·')}입니다.`,
+      hidSentence,
       a.note||'',
       a.jong.wealth?`이 풀이의 대운·세운·월운은 정격(용신 ${yongEl||'없음'}) 기준이며, 종재격은 참고 견해입니다.`:''
     ].filter(Boolean);
@@ -129,7 +138,7 @@
       if(g[k]>=2) strengthParts.push(`${k} ${g[k]}개: ${GROUP_BY_STRENGTH[k][V]}`);
       else if(g[k]===1) strengthParts.push(`${k} 1개: ${GROUP_BY_STRENGTH[k][V]}`);
     }
-    const missingParts=['인성','관성','비겁','식상','재성'].filter(k=>g[k]===0).map(k=>MISSING[k]);
+    const missingParts=['인성','관성','비겁','식상','재성'].filter(k=>g[k]===0).map(k=>hiddenG.has(k)?`겉으로 드러난 ${k}은 없고 지장간에만 있어 ${MISSING_REST[k]}`:MISSING[k]);
     const tenParts=[...strengthParts,...missingParts];
     // 재물
     const wealthText=(()=>{
@@ -158,7 +167,7 @@
     }[spouseGroup]||'';
     const loveText=`${LOVE_BY_JIJI[jiji]||''}${spouseText}${(data.shinsal||[]).some(s=>s.name==='도화살')?' 원국에 도화 표식도 보입니다.':''}`;
     // 건강
-    const healthText=(excess.length||lacking.length)?`${excess.length?`${excess.join('·')} 기운이 많아 ${excess.map(e=>ORGAN[e]).join('·')}을 살필 필요가 있습니다.`:''}${lacking.length?` ${lacking.join('·')} 기운이 없어 ${lacking.map(e=>ORGAN[e]).join('·')}의 기능이 약하기 쉽습니다.`:''}`.trim():'오행이 고르게 있어 특별히 치우친 부분이 드러나지 않습니다.';
+    const healthText=(excess.length||lacking.length)?`${excess.length?`전통 명리에서는 ${excess.join('·')} 기운이 많은 것을 ${excess.map(e=>ORGAN[e]+' 쪽의 기능').join('·')}과 연결해 봅니다.`:''}${lacking.length?` ${lacking.join('·')} 기운이 겉으로 드러나지 않는 것을 ${lacking.map(e=>ORGAN[e]+' 쪽의 기능').join('·')}과 연결해 봅니다.`:''}`.trim():'오행이 고르게 있어 특별히 치우친 부분이 드러나지 않습니다.';
     // 대운: 줄마다 2~3문장
     // 합화 오행: 천간합과 육합은 합하여 생기는 오행이 용신·희신이면 도움, 기신이면 묶임으로 본다.
     const STEM_HAP_EL={甲:'토',己:'토',乙:'금',庚:'금',丙:'수',辛:'수',丁:'목',壬:'목',戊:'화',癸:'화'};
@@ -169,20 +178,42 @@
     const POS_MEAN={연지:'주변 환경과 사회적 배경',월지:'일과 생활 환경',일지:'가까운 관계와 일상',시지:'개인 계획과 장기 목표'};
     const BR_POS_DESC={충:'흔들립니다.',형:'마찰과 조정이 따릅니다.',자형:'마찰과 조정이 따릅니다.',파:'어긋납니다.',해:'불편과 거리가 생깁니다.',원진:'불편과 거리가 생깁니다.',귀문:'예민해지고 몰두하게 됩니다.'};
     // 관계 한 줄씩: 천간합은 합화 오행으로, 육합은 합화 오행과 유불리로, 나머지는 관계 종류별 문장으로
+    // 합과 합화: 합화는 원국 월지 본기의 오행이 합화 오행과 같을 때만 성립한다.
+    const BRE={子:'수',丑:'토',寅:'목',卯:'목',辰:'토',巳:'화',午:'화',未:'토',申:'금',酉:'금',戌:'토',亥:'수'};
+    const monthBrEl=data.pillars[1]?BRE[data.pillars[1].branch]:null;
+    const hapSentence=(partnerLabel,partnerCh,hapEl,cycleEl,partnerEl,verb,partnerIsStem)=>{
+      if(hapEl&&hapEl===monthBrEl){
+        const j=elJudge(hapEl);
+        const tail=j==='용'||j==='희'?'용신·희신이라 유리합니다':j==='기'?'기신이라 불리합니다':'중립입니다';
+        return `${partnerLabel}${josa(partnerCh,'과','와')} ${verb}하여 ${hapEl}${josa(hapEl,'으로','로')} 변하니, ${hapEl}${josa(hapEl,'이','가')} ${tail}.`;
+      }
+      const cj=cycleEl, pj=elJudge(partnerEl);
+      if((cj==='용'||cj==='희')&&pj==='기') return `${partnerLabel}${josa(partnerCh,'과','와')} ${verb}으로 서로 묶여 도움과 부담이 함께 줄어듭니다.`;
+      return `${partnerLabel}${josa(partnerCh,'과','와')} ${verb}으로 서로 묶입니다.`;
+    };
+    // 지지의 판정: 화 명식에서 丑·辰은 희신으로 치지 않는다
+    const branchJ=b=>(a.johu==='화'&&(b==='丑'||b==='辰'))?'중립':elJudge(BRE[b]);
     const relNotes=(rels,stemH,branchH)=>{
       const notes=[];
+      // 조합(방합·삼합) 완성
       rels.filter(x=>x.others).forEach(x=>{ const j=elJudge(x.el); notes.push(`원국의 ${x.others.join('·')}와 ${x.el} ${x.type}을 이룹니다. ${x.el}${josa(x.el,'이','가')} ${j==='용'||j==='희'?'용신·희신이라 유리합니다':j==='기'?'기신이라 불리합니다':'중립입니다'}.`); });
-      rels.filter(x=>x.kind==='천간합').forEach(x=>{ const p=data.pillars[POSIDX[x.pos]]; const el=STEM_HAP_EL[stemH]; if(p&&el) notes.push(`원국 ${x.pos}의 ${KOS2[p.stem]}(${p.stem})${josa(KOS2[p.stem],'과','와')} 합하여 ${el}${josa(el,'으로','로')} 변하니 합의 작용은 ${hapVerdict(el)}.`); });
+      const hasCombo=rels.some(x=>x.others);
+      // 천간합: 일간과의 합은 끌림으로만 쓴다
+      rels.filter(x=>x.kind==='천간합').forEach(x=>{
+        const p=data.pillars[POSIDX[x.pos]]; if(!p) return;
+        if(x.pos==='일간'){ notes.push(`원국 일간과 합이 되어 일간이 그 기운에 끌립니다.`); return; }
+        const hapEl=STEM_HAP_EL[stemH];
+        notes.push(hapSentence(`원국 ${x.pos}의 ${KOS2[p.stem]}(${p.stem})`,KOS2[p.stem],hapEl,elJudge(ELEM_OF[stemH]),ELEM_OF[p.stem],'합','stem'));
+      });
+      // 육합: 위치별로 따로 쓴다 (조합이 있으면 육합 문장은 내지 않는다)
+      if(!hasCombo) rels.filter(x=>x.kind==='육합').forEach(x=>{
+        const p=data.pillars[POSIDX[x.pos]]; if(!p) return;
+        const hapEl=BRE_HAP[branchH];
+        notes.push(hapSentence(`원국 ${x.pos}의 ${KOB[p.branch]}(${p.branch})`,KOB[p.branch],hapEl,branchJ(branchH),BRE[p.branch],'육합','branch'));
+      });
+      // 나머지 관계: 자리별로 묶는다
       const byKind=new Map();
-      rels.filter(x=>x.kind!=='천간합'&&!x.others&&!(x.kind==='육합'&&rels.some(y=>y.others))).forEach(x=>{ if(!byKind.has(x.kind)) byKind.set(x.kind,[]); byKind.get(x.kind).push(x.pos); });
-      const hapPoss=byKind.get('육합');
-      if(hapPoss){
-        const poss=[...new Set(hapPoss)]; const meanings=[...new Set(poss.map(p=>POS_MEAN[p]||p))].join(', ');
-        const el=BR_HAP_EL[branchH]; const j=elJudge(el);
-        notes.push(`${meanings}${josa(meanings.slice(-1),'이','가')} 육합으로 묶입니다. 합화 ${el}${josa(el,'이','가')} ${j==='용'||j==='희'?'용·희신이라 유리하게 작용합니다':j==='기'?'기신이라 힘이 줄어듭니다':'중립입니다'}.`);
-        byKind.delete('육합');
-      }
-      // 같은 자리 조합의 관계 종류는 한 문장으로 묶는다
+      rels.filter(x=>x.kind!=='천간합'&&x.kind!=='육합'&&!x.others).forEach(x=>{ if(!byKind.has(x.kind)) byKind.set(x.kind,[]); byKind.get(x.kind).push(x.pos); });
       const bySet=new Map();
       for(const [kind,poss] of byKind){ const uniq=[...new Set(poss)]; const key=uniq.join('·'); if(!bySet.has(key)) bySet.set(key,{poss:uniq,kinds:[]}); bySet.get(key).kinds.push(kind); }
       for(const {poss,kinds} of bySet.values()){
@@ -193,11 +224,12 @@
       }
       return notes;
     };
+    const BRE_HAP={子:'토',丑:'토',寅:'목',亥:'목',卯:'화',戌:'화',辰:'금',酉:'금',巳:'수',申:'수',午:'화',未:'화'};
     const BR_EL_MAP={子:'수',丑:'토',寅:'목',卯:'목',辰:'토',巳:'화',午:'화',未:'토',申:'금',酉:'금',戌:'토',亥:'수'};
     const conclFor=c=>{
       const stemUseful=c.stem==='용신'||c.stem==='희신', branchUseful=c.branch==='용신'||c.branch==='희신';
       const clashBranch=c.rels.some(x=>x.kind==='충');
-      const hapToKi=c.rels.some(x=>x.kind==='육합'&&elJudge(BR_HAP_EL[c.pillar[1]])==='기');
+      const hapToKi=c.rels.some(x=>x.kind==='육합'&&BRE_HAP[c.pillar[1]]===monthBrEl&&elJudge(BRE_HAP[c.pillar[1]])==='기');
       if(c.stem==='기신'&&(c.branch==='중립'||hapToKi)){ const why=[c.branch==='중립'?'지지가 중립이고':null,hapToKi?'합화가 기신 쪽이라':null].filter(Boolean).join(' '); return `천간이 기신이고 ${why} 주의하는 시기입니다.`; }
       if(c.branch==='용신'&&clashBranch) return '용신이 강하게 들어오지만 충으로 크게 흔들리는 시기입니다.';
       if(branchUseful&&stemUseful) return '천간과 지지가 모두 받쳐 주는 가장 좋은 시기입니다.';
@@ -213,7 +245,7 @@
       const branchEl=BR_EL_MAP[c.pillar[1]];
       const rootNote=branchEl===dayEl?`지지 ${branchLabel(c.pillar[1])}${josa(KOB[c.pillar[1]],'은','는')} 일간과 같은 ${dayEl}${josa(dayEl,'이라','라')} 일간에 뿌리가 생깁니다.`:'';
       const clashBranch=c.rels.some(x=>x.kind==='충');
-      const hapToKi=c.rels.some(x=>x.kind==='육합'&&elJudge(BR_HAP_EL[c.pillar[1]])==='기');
+      const hapToKi=c.rels.some(x=>x.kind==='육합'&&BRE_HAP[c.pillar[1]]===monthBrEl&&elJudge(BRE_HAP[c.pillar[1]])==='기');
       const concl=conclFor(c);
       const hid=(HIDDEN[c.pillar[1]]||'').split('').map(h=>({h,el:ELEM_OF[h]}));
       const yongEl=a.yong;

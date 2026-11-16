@@ -86,7 +86,7 @@
     else if(johu&&bu.용&&johu!==bu.용){ status='갈림'; note=`조후는 ${johu}, 억부는 ${bu.용}을 가리켜 어긋납니다.`; }
     else { yong=bu.용; if(johu&&johu===bu.용) note='조후와 억부가 같은 오행을 가리킵니다.'; }
     const wealthEl=controls(dayEl), outputEl=produces(dayEl), officerEl=controlledBy(dayEl), supportEl=producedBy(dayEl);
-    if(jong.possible&&jong.wealth) note+=' 비겁·인성이 지장간에만 있고 재성이 많아, 종재격으로 보는 견해도 있습니다. 그 경우 용신은 재성·식상 쪽으로 바뀝니다.';
+    if(jong.possible&&jong.wealth) note+=' 재성이 많고 일간이 약해, 종재격으로 보는 견해도 있습니다. 그 경우 용신은 재성·식상 쪽으로 바뀝니다.';
     else if(jong.possible) note+=' 비겁·인성이 지장간에만 있어, 종격으로 보는 견해도 있습니다. 그 경우 용신이 반대가 됩니다.';
 
     // 원국 내부 관계(형·파·해·원진·귀문)
@@ -178,7 +178,9 @@
     const months=(r.extras&&r.extras.monthlyFlow||[]).map(m=>{ const st=judgeStem(KO_ST[m.pillar[0]]); const hb=Object.keys(KO_BR).find(k=>KO_BR[k]===m.pillar[1]); const br=judgeBranch(hb); let score=weight(st,true)+weight(br,false); const stemCat=category(STEM_EL[KO_ST[m.pillar[0]]],dayEl); if(verdict==='신약'&&(stemCat==='재성'||stemCat==='관성')) score-=1; const hbr=hb; const rels=relationsWith(KO_ST[m.pillar[0]],hbr); const chung=rels.filter(x=>x.kind==='충').length; score-=2*chung; const level=score>=1?'좋은 달':score===0?'보통':'주의'; return {month:m.month,pillar:m.pillar,stem:st,branch:br,score,good:score>=1,level,rels,chung,gm:gmOf(hbr),note:m.note||''}; });
 
     return {dayEl,strength,gyeokguk,season,johu,jong,bu,yong,status,note,natal:{relations,stemRel,twelve,gongmang,gongmangBranches:GM.map(b=>({b,judge:judgeBranch(b)})),elCount,lacking,excess,sinsal},years,cycles:cyclesJudged,months,
-      criteria:{strength:'득령: 월지 본기가 비겁·인성. 득지: 일지 지장간에 비겁·인성이 있음. 득세: 천간 3개와 지지 본기 4개 중 비겁·인성이 3개 이상. 3개면 신강, 0개면 신약, 1~2개면 갈림.',johu:'亥·子·丑월은 火, 巳·午·未월은 水를 필요 오행으로 봅니다. 봄·가을은 따로 보지 않습니다.',yong:'신약이면 인성을 용신, 비겁을 희신으로 봅니다. 신강이면 식상을 용신, 재성을 희신으로 봅니다. 조후와 억부가 어긋나면 갈림입니다.',gi:'신약에서는 재성과 식상이 기신, 관성은 한신입니다. 신강에서는 인성과 비겁이 기신이고, 관성은 한신입니다. 용신을 낳는 오행은 기신으로 두지 않습니다.',month:'월운은 천간에 가중치 용신 +2, 희신 +1, 기신 -2, 지지에 용신 +1, 희신 +1, 기신 -1을 더합니다. 신약이면 천간이 재성·관성인 달은 추가로 -1, 원국 지지와 충이 있으면 충 하나마다 -2를 합니다. 합계 1점 이상이면 좋은 달, 0점이면 보통, 음수이면 주의입니다.',relations:'세운·대운·월운의 지지와 천간을 원국 네 기둥과 대조합니다. 천간합, 지지 충·육합·형·파·해·원진·귀문·자형을 식별하고, 방합·삼합은 원국 지지와 합쳐 완성되는 경우만 봅니다. 귀문은 子酉·丑午·寅未·卯申·辰亥·巳戌 여섯 쌍입니다.',shinsal:'천을귀인과 문창귀인, 양인살은 일간 기준, 백호살과 괴강살은 간지 기준, 12신살은 년지 삼합 기준입니다. 공망은 일주 기준으로 午·未 같은 두 지지를 구하고, 그 지지가 용신·희신·기신 중 무엇인지 적습니다. 세운·대운·월운의 지지가 공망 지지이면 공망으로 표시합니다.',gyeok:'격은 월지 본기의 십성으로 정하고, 같은 십성이 천간에 드러나면 투출로 봅니다.'}};
+      criteria:{strength:'득령: 월지 본기가 비겁·인성. 득지: 일지 지장간에 비겁·인성이 있음. 득세: 천간 3개와 지지 본기 4개 중 비겁·인성이 3개 이상. 3개면 신강, 0개면 신약, 1~2개면 갈림.',johu:'亥·子·丑월은 火, 巳·午·未월은 水를 필요 오행으로 봅니다. 봄·가을은 따로 보지 않습니다.',yong:'신약이면 인성을 용신, 비겁을 희신으로 봅니다. 신강이면 식상을 용신, 재성을 희신으로 봅니다. 조후와 억부가 어긋나면 갈림입니다.',gi:'신약에서는 재성과 식상이 기신, 관성은 한신입니다. 신강에서는 인성과 비겁이 기신이고, 관성은 한신입니다. 용신을 낳는 오행은 기신으로 두지 않습니다.',month:'월운은 천간에 가중치 용신 +2, 희신 +1, 기신 -2, 지지에 용신 +1, 희신 +1, 기신 -1을 더합니다. 신약이면 천간이 재성·관성인 달은 추가로 -1, 원국 지지와 충이 있으면 충 하나마다 -2를 합니다. 합계 1점 이상이면 좋은 달, 0점이면 보통, 음수이면 주의입니다.',relations:'세운·대운·월운의 지지와 천간을 원국 네 기둥과 대조합니다. 천간합, 지지 충·육합·형·파·해·원진·귀문·자형을 식별하고, 방합·삼합은 원국 지지와 합쳐 완성되는 경우만 봅니다. 귀문은 子酉·丑午·寅未·卯申·辰亥·巳戌 여섯 쌍입니다.',shinsal:'천을귀인과 문창귀인, 양인살은 일간 기준, 백호살과 괴강살은 간지 기준, 12신살은 년지 삼합 기준입니다. 공망은 일주 기준으로 午·未 같은 두 지지를 구하고, 그 지지가 용신·희신·기신 중 무엇인지 적습니다. 세운·대운·월운의 지지가 공망 지지이면 공망으로 표시합니다.',gyeok:'격은 월지 본기의 십성으로 정하고, 같은 십성이 천간에 드러나면 투출로 봅니다.',
+        hap:'합과 합화: 천간합과 육합은 원국 월지 본기의 오행이 합화 오행과 같을 때만 합화로 봅니다. 합화가 성립하면 "합하여 X로 변합니다"라고 쓰고, X가 용신·희신이면 유리, 기신이면 불리합니다. 성립하지 않으면 "합으로 서로 묶입니다"만 씁니다. 운의 글자가 용신·희신이고 상대가 기신이면 "도움과 부담이 함께 줄어듭니다"로 씁니다. 일간과의 합은 일간이 그 기운에 끌린다고만 쓰고 유불리는 붙이지 않습니다.',
+        branchRule:'지지 규칙: 조후 용신이 화인 명식에서는 습토인 丑·辰을 희신으로 치지 않습니다. 대운·세운·월운의 지지가 원국 지지와 방합·삼합을 완성하면 그 합의 오행으로 평가합니다.'}};
   }
   function branchOrder(b){ return '子丑寅卯辰巳午未申酉戌亥'.indexOf(b); }
   return {analyze, PAIRS, pairKind};
