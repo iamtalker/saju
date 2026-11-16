@@ -114,7 +114,6 @@
       a.note||''
     ].filter(Boolean);
     if(a.jong.wealth) summaryParts.push('재성이 많은데 일간이 약해 재성을 감당하는 것이 이 명식의 핵심 과제입니다.');
-    if(a.jong.possible) summaryParts.push('비겁과 인성이 지장간에만 있어 종격으로 보는 견해가 있습니다.');
     const summary=summaryParts.join(' ');
     // 성격: 일간, 강한 식상의 결, 없는 관성·인성으로 읽는다
     const outputPolar=(ten['상관']||0)>=(ten['식신']||0)&&(ten['상관']||0)>0?'기존 방식을 따져 보고 스스로 다시 만드는 힘':'꾸준히 만들고 가꾸는 힘';
@@ -160,28 +159,42 @@
     // 건강
     const healthText=(excess.length||lacking.length)?`${excess.length?`${excess.join('·')} 기운이 많아 ${excess.map(e=>ORGAN[e]).join('·')}을 살필 필요가 있습니다.`:''}${lacking.length?` ${lacking.join('·')} 기운이 없어 ${lacking.map(e=>ORGAN[e]).join('·')}의 기능이 약하기 쉽습니다.`:''}`.trim():'오행이 고르게 있어 특별히 치우친 부분이 드러나지 않습니다.';
     // 대운: 줄마다 2~3문장
+    // 합화 오행: 천간합과 육합은 합하여 생기는 오행이 용신·희신이면 도움, 기신이면 묶임으로 본다.
+    const STEM_HAP_EL={甲:'토',己:'토',乙:'금',庚:'금',丙:'수',辛:'수',丁:'목',壬:'목',戊:'화',癸:'화'};
+    const BR_HAP_EL={子:'토',丑:'토',寅:'목',亥:'목',卯:'화',戌:'화',辰:'금',酉:'금',巳:'수',申:'수',午:'화',未:'화'};
+    const POSIDX={연간:0,월간:1,일간:2,시간:3,연지:0,월지:1,일지:2,시지:3};
+    const elJudge=el=>el===a.yong?'용':(el===a.bu.희?'희':(a.bu.기.includes(el)?'기':'중'));
+    const hapVerdict=el=>{ const j=elJudge(el); return j==='용'||j==='희'?'도움이 더해집니다':j==='기'?'묶여 힘이 줄어듭니다':'영향이 중립입니다'; };
+    const BR_POS_DESC={충:'그 자리가 흔들립니다.',형:'마찰과 조정이 따릅니다.',자형:'마찰과 조정이 따릅니다.',파:'어긋남이 있습니다.',해:'불편과 거리가 생깁니다.',원진:'불편과 거리가 생깁니다.',귀문:'예민함과 몰두가 생깁니다.'};
+    // 관계 한 줄씩: 천간합은 합화 오행으로, 육합은 합화 오행과 유불리로, 나머지는 관계 종류별 문장으로
+    const relNotes=(rels,stemH,branchH)=>{
+      const notes=[];
+      rels.filter(x=>x.kind==='천간합').forEach(x=>{ const p=data.pillars[POSIDX[x.pos]]; const el=STEM_HAP_EL[stemH]; if(p&&el) notes.push(`원국 ${x.pos}의 ${KOS2[p.stem]}(${p.stem})${josa(KOS2[p.stem],'과','와')} 합하여 ${el}${josa(el,'으로','로')} 변하니 합의 작용은 ${hapVerdict(el)}.`); });
+      const byKind=new Map();
+      rels.filter(x=>x.kind!=='천간합').forEach(x=>{ if(!byKind.has(x.kind)) byKind.set(x.kind,[]); byKind.get(x.kind).push(x.pos); });
+      for(const [kind,poss] of byKind){
+        const pos=poss.join('·')+josa(poss[poss.length-1],'과','와');
+        if(kind==='육합'){ const el=BR_HAP_EL[branchH]; const j=elJudge(el); notes.push(`${pos} 육합이 되어 그 자리에 묶입니다. 합화 ${el}${josa(el,'이','가')} ${j==='용'||j==='희'?'용·희신이라 유리하게 작용합니다':j==='기'?'기신이라 힘이 줄어듭니다':'중립입니다'}.`); }
+        else notes.push(`${pos} ${kind}: ${BR_POS_DESC[kind]||'관계가 있습니다.'}`);
+      }
+      return notes;
+    };
     const cycleText=c=>{
       const s1=`${c.pillar}(만 ${c.fromAge}~${c.toAge}세) 대운은 천간 ${stemLabel(c.pillar[0])}${josa(KOS2[c.pillar[0]],'은','는')} ${judgeText(c.stem)}, 지지 ${branchLabel(c.pillar[1])}${josa(KOB[c.pillar[1]],'은','는')} ${judgeText(c.branch)}입니다.`;
-      const stemBoundRel=c.rels.find(x=>x.kind==='천간합');
-      const stemBound=!!stemBoundRel;
-      const bits=[];
-      const POSIDX={연간:0,월간:1,일간:2,시간:3};
-      if(stemBound&&(c.stem==='용신'||c.stem==='희신')){ const partner=data.pillars[POSIDX[stemBoundRel.pos]]; bits.push(`천간 ${stemLabel(c.pillar[0])}${josa(KOS2[c.pillar[0]],'은','는')} 원국 ${stemBoundRel.pos}의 ${partner?KOS2[partner.stem]+'('+partner.stem+')':'글자'}${partner?josa(KOS2[partner.stem],'과','와'):'과'} 합으로 묶여 힘이 절반만 들어옵니다.`); }
-      const yongEl=a.yong;
+      const notes=relNotes(c.rels,c.pillar[0],c.pillar[1]);
+      const stemUseful=c.stem==='용신'||c.stem==='희신', branchUseful=c.branch==='용신'||c.branch==='희신';
+      const concl=branchUseful&&stemUseful?'천간과 지지가 모두 받쳐 주는 가장 좋은 시기입니다.':branchUseful?'천간의 도움은 약해도 지지라는 바탕이 받쳐 주는 시기입니다.':stemUseful?'드러나는 도움은 있으나 지지의 바탕이 약한 시기입니다.':(c.stem==='기신'&&c.branch==='기신')?'천간과 지지가 모두 기신이라 주의하는 시기입니다.':'큰 힘이 두드러지지 않는 시기입니다.';
       const hid=(HIDDEN[c.pillar[1]]||'').split('').map(h=>({h,el:ELEM_OF[h]}));
-      if((c.stem==='희신'||c.stem==='용신'||c.branch==='희신'||c.branch==='용신')&&hid.some(h=>h.el===yongEl)&&!data.pillars.some(p=>p&&(p.stemElement===yongEl||p.branchElement===yongEl))) bits.push(`지지 ${branchLabel(c.pillar[1])} 속의 ${hid.find(h=>h.el===yongEl).h}(${yongEl})${josa(yongEl,'이','가')} 원국에 없던 기운을 들여옵니다.`);
-      if(c.rels.some(x=>x.kind==='충')) bits.push('지지는 원국과 충이 있어 그 자리의 기운이 흔들립니다.');
-      if(!bits.length&&c.rels.length) bits.push(`원국과 ${relText(c.rels)} 관계가 있어 그 자리에서 힘이 살아나거나 묶입니다.`);
-      if(!c.rels.length) bits.push('원국과 합·충·형 관계가 없어 힘이 그대로 들어옵니다.');
-      const s3=c.stem==='기신'&&c.branch==='기신'?'기신이 겹쳐 부담이 큰 시기입니다.':(c.stem==='용신'||c.stem==='희신')&&(c.branch==='용신'||c.branch==='희신')&&!stemBound?'용신과 희신이 함께 들어와 버팀이 되는 시기입니다.':(c.stem==='용신'||c.stem==='희신')&&c.branch==='기신'?'천간의 힘은 들어오지만 지지의 기신이 함께 있어 절반만 쓸 수 있는 시기입니다.':c.stem==='기신'?'기신 기운이 들어와 조심해야 하는 시기입니다.':'큰 힘이 두드러지지 않는 시기입니다.';
-      return [s1,bits.join(' '),s3+(c.gm?' 지지가 공망이라 기운이 비는 자리입니다.':'')].filter(Boolean).join(' ');
+      const yongEl=a.yong;
+      const storeText=((c.stem==='희신'||c.stem==='용신'||c.branch==='희신'||c.branch==='용신')&&hid.some(h=>h.el===yongEl)&&!data.pillars.some(p=>p&&(p.stemElement===yongEl||p.branchElement===yongEl)))?`지지 ${branchLabel(c.pillar[1])} 속의 ${hid.find(h=>h.el===yongEl).h}(${yongEl})${josa(yongEl,'이','가')} 원국에 없던 기운을 들여옵니다.`:'';
+      return [s1,...notes,storeText,concl+(c.gm?' 지지가 공망이라 기운이 비는 자리입니다.':'')].filter(Boolean).join(' ');
     };
     const cycleLines=a.cycles.map(cycleText);
     const nowAge=Number(data.extras.year)-parseInt(String(data.solar).split('년')[0],10);
     const cur=a.cycles.find(c=>nowAge>=c.fromAge&&nowAge<=c.toAge);
     const curText=cur?`현재 대운: ${cycleText(cur)}`:'현재 나이에 해당하는 대운이 없습니다.';
     // 세운: 올해와 내년은 문단, 나머지는 한두 문장
-    const yearLine=(y)=>{ const rel=relText(y.rels); return `${y.year}년 ${y.pillar}: 천간 ${stemLabel(y.pillar[0])}${josa(KOS2[y.pillar[0]],'은','는')} ${judgeText(y.stem)}, 지지 ${branchLabel(y.pillar[1])}${josa(KOB[y.pillar[1]],'은','는')} ${judgeText(y.branch)}입니다.${rel?' 원국과의 관계: '+rel+'.':' 원국과 충·합·형 관계가 없습니다.'}${y.gm?' 지지가 공망입니다.':''}`; };
+    const yearLine=(y)=>{ const rel=relNotes(y.rels,y.pillar[0],y.pillar[1]).join(' '); return `${y.year}년 ${y.pillar}: 천간 ${stemLabel(y.pillar[0])}${josa(KOS2[y.pillar[0]],'은','는')} ${judgeText(y.stem)}, 지지 ${branchLabel(y.pillar[1])}${josa(KOB[y.pillar[1]],'은','는')} ${judgeText(y.branch)}입니다.${rel?' '+rel:' 원국과 충·합·형 관계가 없습니다.'}${y.gm?' 지지가 공망입니다.':''}`; };
     const nowYear=Number(data.extras.year);
     const yNow=a.years.find(y=>y.year===nowYear), yNext=a.years.find(y=>y.year===nowYear+1);
     const yearDetail=[yNow,yNext].filter(Boolean).map(y=>{
@@ -191,10 +204,12 @@
       if(y.rels.some(x=>x.kind==='충')) parts.push('원국과 충이 있어 그 자리의 일정과 관계가 흔들리기 쉽습니다.');
       return parts.join(' ');
     }).join('<br>');
-    const yearRest=a.years.filter(y=>y!==yNow&&y!==yNext).map(y=>{ const rel=relText(y.rels); return `${y.year}년 ${y.pillar}: 천간 ${KOS2[y.pillar[0]]}(${y.pillar[0]})${josa(KOS2[y.pillar[0]],'은','는')} ${judgeText(y.stem)}, 지지 ${KOB[y.pillar[1]]}(${y.pillar[1]})${josa(KOB[y.pillar[1]],'은','는')} ${judgeText(y.branch)}입니다.${rel?' 원국과의 관계: '+rel+'.':' 원국과 충·합·형 관계가 없습니다.'}${y.gm?' 지지가 공망입니다.':''}`; }).join('<br>');
+    const yearRest=a.years.filter(y=>y!==yNow&&y!==yNext).map(y=>{ const rel=relNotes(y.rels,y.pillar[0],y.pillar[1]).join(' '); return `${y.year}년 ${y.pillar}: 천간 ${KOS2[y.pillar[0]]}(${y.pillar[0]})${josa(KOS2[y.pillar[0]],'은','는')} ${judgeText(y.stem)}, 지지 ${KOB[y.pillar[1]]}(${y.pillar[1]})${josa(KOB[y.pillar[1]],'은','는')} ${judgeText(y.branch)}입니다.${rel?' '+rel:' 원국과 충·합·형 관계가 없습니다.'}${y.gm?' 지지가 공망입니다.':''}`; }).join('<br>');
     const yearText=yearDetail+(yearRest?'<br>'+yearRest:'');
     // 월운
-    const monthLines=a.months.map(m=>`${m.month}월 ${m.pillar}: 천간 ${KOS2[m.pillar[0]]||m.pillar[0]} ${judgeText(m.stem)}, 지지 ${m.pillar[1]} ${judgeText(m.branch)}.${m.rels.length?' 원국과의 관계: '+relText(m.rels)+'.':''}${m.gm?' 공망입니다.':''} (점수 ${m.score>0?'+':''}${m.score}). ${m.level}.`);
+    const KOHS_R={갑:'甲',을:'乙',병:'丙',정:'丁',무:'戊',기:'己',경:'庚',신:'辛',임:'壬',계:'癸'};
+    const KOBR_R={자:'子',축:'丑',인:'寅',묘:'卯',진:'辰',사:'巳',오:'午',미:'未',신:'申',유:'酉',술:'戌',해:'亥'};
+    const monthLines=a.months.map(m=>`${m.month}월 ${m.pillar}: 천간 ${KOS2[m.pillar[0]]||m.pillar[0]} ${judgeText(m.stem)}, 지지 ${m.pillar[1]} ${judgeText(m.branch)}.${m.rels.length?' '+relNotes(m.rels,KOHS_R[m.pillar[0]],KOBR_R[m.pillar[1]]).join(' '):''}${m.gm?' 공망입니다.':''} (점수 ${m.score>0?'+':''}${m.score}). ${m.level}.`);
     const goodMonths=a.months.filter(m=>m.good).map(m=>`${m.month}월`).join(' · ');
     // 원국 관계와 신살, 공망
     const natalLines=[];
