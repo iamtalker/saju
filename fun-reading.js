@@ -91,7 +91,61 @@ const MISSING={
     return [...m.entries()].map(([pos,ks])=>pos==='__'?ks.join(', '):`${pos}${josa(pos,'과','와')} ${ks.join('·')}`).join(', ');
   }
 
-  function build(data){
+  // ── 현재 대운과 올해 세운 요약 ──
+  // 기존 analysis.cycles(현재 나이에 해당하는 구간)와 analysis.years(기준 연도)의 판정값만 쓴다.
+  const TONE_NOW={도움:'기운을 받쳐 주는',부담:'부담이 커지기 쉬운',중립:'뚜렷한 힘이 두드러지지 않는'};
+  const TONE_ADD={도움:'도움이 되는 기운',부담:'부담이 되는 기운',중립:'뚜렷한 방향이 없는 기운'};
+  // 천간과 지지의 판정으로 한 흐름의 방향을 정한다. 용신·희신은 도움, 기신은 부담, 그 밖은 중립.
+  // 갈림·보류가 섞였거나 도움과 부담이 함께 있으면 방향을 정하지 않는다(null).
+  function toneOfPair(stem,branch){
+    const js=[stem,branch];
+    if(js.some(j=>!j||j==='갈림'||j==='보류')) return null;
+    const good=js.some(j=>j==='용신'||j==='희신'), bad=js.includes('기신');
+    if(good&&bad) return null;
+    return good?'도움':bad?'부담':'중립';
+  }
+  function bridge(data){
+    const a=data.analysis, out={lines:[],basis:null,reason:null};
+    if(!a||!data.pillars[2]){ out.reason='일간이 확정되지 않아 판정 결과가 없습니다.'; return out; }
+    if(a.status!=='정함'){ out.reason=`용신 판정이 ${a.status}이라 현재 대운과 올해 세운의 방향을 비교하지 않습니다.`; return out; }
+    const nowYear=Number(data.extras.year), nowAge=nowYear-parseInt(String(data.solar).split('년')[0],10);
+    const yNow=(a.years||[]).find(y=>y.year===nowYear)||null;
+    const yTone=yNow?toneOfPair(yNow.stem,yNow.branch):null;
+    let cur=null, curReason=null;
+    if(data.daeun&&data.daeun.alternatives) curReason='성별을 고르지 않아 남성·여성 두 기준 중 현재 대운을 하나로 정할 수 없습니다.';
+    else if(!data.daeun||!data.daeun.available) curReason=(data.daeun&&data.daeun.reason)||'대운을 계산하지 않아 현재 대운을 정할 수 없습니다.';
+    else{
+      cur=(a.cycles||[]).find(c=>nowAge>=c.fromAge&&nowAge<=c.toAge)||null;
+      if(!cur) curReason='현재 나이에 해당하는 대운 구간이 없습니다.';
+    }
+    const cTone=cur?toneOfPair(cur.stem,cur.branch):null;
+    if(cur&&!cTone){ cur=null; curReason='현재 대운의 천간·지지 판정이 갈림이거나 보류라 방향을 정할 수 없습니다.'; }
+    const curPart=cur?`현재 대운 ${cur.pillar}(만 ${cur.fromAge}~${cur.toAge}세)은 ${TONE_NOW[cTone]} 흐름이 이어지는 시기입니다.`:null;
+    const yearPart=yNow&&yTone?`${nowYear}년 ${yNow.pillar} 세운은 ${TONE_ADD[yTone]}을 더합니다.`:null;
+    if(!curPart||!yearPart){
+      if(yearPart) out.lines.push(yearPart);
+      out.reason=curPart?(!yNow?'올해 세운이 기준 연도에 없습니다.':'올해 세운의 판정이 갈림이거나 보류입니다.'):curReason;
+      if(curPart) out.lines.unshift(curPart);
+      return out;
+    }
+    let link;
+    if(cTone===yTone) link=cTone==='중립'?'두 흐름 모두 뚜렷한 방향이 없어 방향이 엇갈리지 않습니다.':`두 흐름이 같은 방향(${cTone})이라 이 시기의 기운이 한 방향으로 모입니다.`;
+    else if((cTone==='도움'&&yTone==='부담')||(cTone==='부담'&&yTone==='도움')) link='두 흐름이 엇갈려, 도움과 부담이 함께 나타나는 해로 볼 수 있습니다.';
+    else link='한쪽은 중립이라 두 흐름의 방향이 뚜렷하게 엇갈리지 않습니다.';
+    // 근거는 한 가지만: 올해 세운에서 방향을 정한 글자(지지 판정이 방향을 정했으면 지지, 아니면 천간).
+    const bJ=yNow.branch, sJ=yNow.stem;
+    out.basis=bJ!=='중립'&&bJ!=='한신'?`근거: 올해 세운의 지지 ${yNow.pillar[1]}, 판정 ${bJ}이 방향을 정했습니다.`:`근거: 올해 세운의 천간 ${yNow.pillar[0]}, 판정 ${sJ}이 방향을 정했습니다.`;
+    out.lines=[curPart,yearPart,link,'이 요약은 흐름의 방향만 잇고, 사건이 생긴다고 단정하지 않습니다.'];
+    return out;
+  }
+  function bridgeParts(data){
+    const b=bridge(data);
+    return [...(b.lines.length?[b.lines.join(' ')]:[]),...(b.basis?[b.basis]:[]),...(b.reason?[`요약 보류 이유: ${b.reason}`]:[])];
+  }
+  function bridgeBlock(data){ const parts=bridgeParts(data); return SECTION('현재 대운과 올해 세운', parts.length?parts.join('<br>'):'표시할 요약이 없습니다.'); }
+  function bridgeMarkdown(data){ const parts=bridgeParts(data); return ['## 현재 대운과 올해 세운','',...parts.flatMap(p=>[p,'']),]; }
+
+  function build(data, profileHtml=''){
     const a=data.analysis;
     const day=data.pillars[2];
     if(!day||!a) return '';
@@ -130,13 +184,6 @@ const MISSING={
     ].filter(Boolean);
     if(a.jong.wealth) summaryParts.push('재성이 많은데 일간이 약해 재성을 감당하는 것이 이 명식의 핵심 과제입니다.');
     const summary=summaryParts.join(' ');
-    // 성격: 일간, 강한 식상의 결, 없는 관성·인성으로 읽는다
-    const outputPolar=(ten['상관']||0)>=(ten['식신']||0)&&(ten['상관']||0)>0?'기존 방식을 따져 보고 스스로 다시 만드는 힘':'꾸준히 만들고 가꾸는 힘';
-    const personalityParts=[DAY_TRAIT[dayChar]];
-    if(g.식상>=2) personalityParts.push(`식상이 두드러져 ${outputPolar}이 강합니다.`);
-    if(g.관성===0&&g.인성===0) personalityParts.push('겉으로 드러난 관성과 인성이 없어 기존 체계에 기대기보다 독학으로 익히고 스스로 길을 만드는 독학형에 가깝습니다.');
-    personalityParts.push(g.식상>=2&&V==='신약'?'말과 행동이 먼저 나가는 편이라 주변에 의욕을 전하는 힘이 있습니다.':GROUP_BY_STRENGTH[g.식상>=2?'식상':'비겁'][V]);
-    const personality=personalityParts.join(' ');
     // 강한 십성과 없는 십성 문단
     const strengthParts=[];
     for(const k of ['식상','재성','관성','인성','비겁']){
@@ -145,20 +192,6 @@ const MISSING={
     }
     const missingParts=['인성','관성','비겁','식상','재성'].filter(k=>g[k]===0).map(k=>hiddenG.has(k)?`겉으로 드러난 ${k}은 없고 지장간에만 있어 ${MISSING_REST[k]}`:MISSING[k]);
     const tenParts=[...strengthParts,...missingParts];
-    // 재물
-    const wealthText=(()=>{
-      if(g.재성===0) return MISSING.재성;
-      if(V==='신약'&&g.재성>=3) return '벌 길은 있으나 쌓이지 않고 지나갑니다. 재성이 많은데 일간이 약해 재물을 붙잡아 두기 어렵습니다. 재물을 얻으려면 인성과 비겁의 도움을 받아야 합니다.';
-      if(V==='신강') return '재물을 다루는 힘이 있어 쌓아 가는 편입니다.';
-      return '재성이 있으나 많지 않아 상황에 따라 달라집니다.';
-    })();
-    // 직업: 강한 십성, 없는 십성, 강약을 함께 본다. 십성 사전에서 직종을 꺼내지 않는다.
-    const jobPieces=[];
-    if(g.식상>=2) jobPieces.push(`${JOB_BY_STRENGTH.식상}이 맞는 편입니다`);
-    if(V==='신약') jobPieces.push('책임이 무거운 자리보다 자기 몫을 스스로 정하는 일이 맞습니다');
-    if(g.관성===0) jobPieces.push('조직의 직위보다 자기 영역에서 성과를 내는 구조입니다');
-    if(g.인성===0) jobPieces.push('도움을 받는 경로가 적어 혼자 익히고 버티는 힘이 필요합니다');
-    const careerText=jobPieces.length?jobPieces.join('. ')+'.':'강약과 십성 구성이 특정 방향으로 치우치지 않아 여러 방향이 열려 있습니다.';
     // 연애: 배우자 자리의 십성과 강약을 함께 본다
     const jiji=day.hangul[1];
     const dayBranchTen=day.hidden&&day.hidden.length?day.hidden[day.hidden.length-1].ten:null;
@@ -257,6 +290,34 @@ const MISSING={
       const storeText=((c.stem==='희신'||c.stem==='용신'||c.branch==='희신'||c.branch==='용신')&&hid.some(h=>h.el===yongEl)&&!data.pillars.some(p=>p&&(p.stemElement===yongEl||p.branchElement===yongEl)))?`지지 ${branchLabel(c.pillar[1])} 속의 ${hid.find(h=>h.el===yongEl).h}(${yongEl})${josa(yongEl,'이','가')} 원국에 없던 기운을 들여옵니다.`:'';
       return [s1,...notes,rootNote,storeText,concl+(c.gm?' 지지가 공망이라 기운이 비는 자리입니다.':'')].filter(Boolean).join(' ');
     };
+    // 원국 관계와 신살, 공망
+    const natalLines=[];
+    if(a.natal.relations.length) natalLines.push(...a.natal.relations.map(x=>`${x.positions} ${x.characters} ${x.kinds.join('·')}`));
+    if(a.natal.stemRel.length) natalLines.push(...a.natal.stemRel.map(x=>`${x.positions} ${x.characters} 천간합`));
+    const sinsalLine=(a.natal.sinsal||[]).map(s=>`${s.name} ${s.positions}`).join(' · ')||'특수 신살은 없습니다';
+    const twelveLine=(a.natal.twelve||[]).map(t=>`${t.pos} ${t.b} ${t.name}`).join(' · ');
+    const gmNote=a.natal.gongmangBranches.map(x=>`${KOB[x.b]}(${x.b})${josa(KOB[x.b],'은','는')} ${x.judge}`).join(', ');
+    const gongLine=(a.natal.gongmang||[]).length?`공망 지지: ${gmNote}. 원국에 공망이 있습니다: ${(a.natal.gongmang||[]).map(x=>`${x.pos} ${x.b}, ${x.meaning}`).join(' · ')}.`:`공망 지지: ${gmNote}. 원국에는 공망 지지가 없습니다. 세운·대운·월운의 지지가 이 자리에 오면 공망으로 표시합니다.`;
+    if(!data.pillars[1]||a.strength.verdict==='보류'){
+      const st=a.strength;
+      const LBL=['연주','월주',null,'시주'];
+      const miss=[0,1,3].filter(i=>!data.pillars[i]).map(i=>LBL[i]);
+      const missTxt=miss.join('·');
+      const hitsLine=st.verdict==='보류'?`일간의 강약은 보류입니다. 확정되지 않은 ${missTxt}에 따라 충족 개수가 ${st.hitsRange[0]}~${st.hitsRange[1]}개 범위에 있고, 그 범위에서 판정이 하나로 정해지지 않습니다.`:`일간의 강약은 ${st.verdict}입니다.`;
+      const partSummary=`일주 ${day.hangul}(${day.stem})는 확정되었고 ${miss.length?`${missTxt}는 확정되지 않았습니다.`:'모든 기둥이 확정되었습니다.'} ${hitsLine} ${data.pillars[1]?'용신은 신강·신약 판정에 따르므로 보류합니다.':'격국·용신·조후와 월운은 월지가 필요하므로 보류합니다.'}`;
+      const cnt=Object.entries(g).filter(([k,v])=>v>0).map(([k,v])=>`${k} ${v}개`).join(' · ')||'없음';
+      const relLines=(a.years||[]).filter(y=>y.rels.length).map(y=>`${y.year}년 ${y.pillar}: ${y.rels.map(r=>r.kind+(r.pos?`(${r.pos})`:'')).join(' · ')}`);
+      return `<article id="reading-fun-all" class="reading-card"><span>풀이</span><h3>종합 총평 (부분 명식)</h3>`
+        + SECTION('종합 총평', partSummary)
+        + bridgeBlock(data)
+        + SECTION('십성 구성', `확정된 기둥에서 본 십성 개수: ${cnt}. 강약에 따른 십성 해석은 월주 확정 후 붙입니다.`)
+        + profileHtml
+        + SECTION('원국 관계', natalLines.length?natalLines.join(' · '):'형·파·해·원진·귀문·합·충 관계가 원국에 없습니다.')
+        + SECTION('신살', sinsalLine+'. 12신살(년지 기준): '+twelveLine)
+        + SECTION('공망', gongLine)
+        + SECTION('대운·세운·월운', '확정되지 않은 기둥이 있어 대운과 월운의 판정을 보류합니다. 세운은 지지 관계만 표시합니다.'+(relLines.length?'<br>'+relLines.join('<br>'):'<br>세운 중 원국과 맺는 관계가 없습니다.'))
+        + `</article>`;
+    }
     const cycleLines=a.cycles.map(cycleText);
     const dy=data.daeun||{};
     const daeunTitle=dy.available?`대운 · ${dy.sex==='male'?'남성':'여성'} · ${dy.direction} · ${dy.direction==='역행'?'직전':'다음'} 절입까지 ${dy.distanceDays}일 ÷ 3 = ${(dy.distanceDays/3).toFixed(1)} → 만 ${dy.startYears}세 시작`:'대운';
@@ -279,20 +340,11 @@ const MISSING={
     const KOBR_R={자:'子',축:'丑',인:'寅',묘:'卯',진:'辰',사:'巳',오:'午',미:'未',신:'申',유:'酉',술:'戌',해:'亥'};
     const monthLines=a.months.map(m=>`${m.month}월 ${m.pillar}: 천간 ${KOS2[m.pillar[0]]||m.pillar[0]} ${judgeText(m.stem)}, 지지 ${m.pillar[1]} ${judgeText(m.branch)}.${m.note?' '+m.note+'.':''}${m.rels.length?' '+relNotes(m.rels,KOHS_R[m.pillar[0]],KOBR_R[m.pillar[1]]).join(' '):''}${m.gm?' 공망입니다.':''} (점수 ${m.score>0?'+':''}${m.score}). ${m.level}.`);
     const goodMonths=a.months.filter(m=>m.good).map(m=>`${m.month}월`).join(' · ');
-    // 원국 관계와 신살, 공망
-    const natalLines=[];
-    if(a.natal.relations.length) natalLines.push(...a.natal.relations.map(x=>`${x.positions} ${x.characters} ${x.kinds.join('·')}`));
-    if(a.natal.stemRel.length) natalLines.push(...a.natal.stemRel.map(x=>`${x.positions} ${x.characters} 천간합`));
-    const sinsalLine=(a.natal.sinsal||[]).map(s=>`${s.name} ${s.positions}`).join(' · ')||'특수 신살은 없습니다';
-    const twelveLine=(a.natal.twelve||[]).map(t=>`${t.pos} ${t.b} ${t.name}`).join(' · ');
-    const gmNote=a.natal.gongmangBranches.map(x=>`${KOB[x.b]}(${x.b})${josa(KOB[x.b],'은','는')} ${x.judge}`).join(', ');
-    const gongLine=(a.natal.gongmang||[]).length?`공망 지지: ${gmNote}. 원국에 공망이 있습니다: ${(a.natal.gongmang||[]).map(x=>`${x.pos} ${x.b}, ${x.meaning}`).join(' · ')}.`:`공망 지지: ${gmNote}. 원국에는 공망 지지가 없습니다. 세운·대운·월운의 지지가 이 자리에 오면 공망으로 표시합니다.`;
     return `<article id="reading-fun-all" class="reading-card"><span>풀이</span><h3>종합 총평</h3>`
       + SECTION('종합 총평', summary)
-      + SECTION('성격', personality)
+      + bridgeBlock(data)
       + SECTION('십성 해석 (강약 기준)', tenParts.join(' '))
-      + SECTION('재물', wealthText)
-      + SECTION('직업·적성', careerText)
+      + profileHtml
       + SECTION('연애·배우자', loveText)
       + SECTION('건강', healthText)
       + SECTION('원국 관계', natalLines.length?natalLines.join(' · '):'형·파·해·원진·귀문·합·충 관계가 원국에 없습니다.')
@@ -303,5 +355,5 @@ const MISSING={
       + SECTION(`월운 (${data.extras.year}년 기준 12달)`, monthLines.join('<br>')+`<br>좋은 달: ${goodMonths||'없음'}`)
       + `</article>`;
   }
-  return {build};
+  return {build,bridge,bridgeMarkdown};
 });

@@ -72,7 +72,7 @@
     const month=pillars[1];
     const dayIndex=day?'甲乙丙丁戊己庚辛壬癸'.indexOf(day.stem):-1;
     const twelve=dayIndex<0?null:pillars.map(p=>{if(!p)return null;const start=branches.indexOf(twelveStarts[dayIndex]);const branch=branches.indexOf(p.branch);const step=dayIndex%2===0?branch-start:start-branch;return twelveNames[(step+12)%12];});
-    return {day:day?{name:day.hangul[0],hanja:day.stem,element:day.stemElement,polarity:day.stemYin,metaphor:stems[day.stem][0],image:stems[day.stem][1],theme:stems[day.stem][2]}:null,season:month?{branch:month.hangul[1],element:month.branchElement,ten:month.hidden.map(x=>x.ten)}:null,pillarGuides,twelve,shinsal:findShinsal(pillars),counts,knownCount:known.length*2,prominent,missing,elementText,tenThemes:[...groups].map(([name,positions])=>({name,positions,title:ten[name][0],meaning:ten[name][1],suggestion:ten[name][2]})),hiddenThemes:[...hiddenGroups].map(([name,positions])=>({name,title:tenText[name][0],meaning:ten[name][1],positions})),relations:data.relations,partial:known.length<4};
+    return {day:day?{name:day.hangul[0],hanja:day.stem,element:day.stemElement,polarity:day.stemYin,metaphor:stems[day.stem][0],image:stems[day.stem][1],theme:stems[day.stem][2]}:null,season:month?{branch:month.hangul[1],element:month.branchElement,ten:day?month.hidden.map(x=>x.ten):null}:null,pillarGuides,twelve,shinsal:findShinsal(pillars),counts,knownCount:known.length*2,prominent,missing,elementText,tenThemes:[...groups].map(([name,positions])=>({name,positions,title:ten[name][0],meaning:ten[name][1],suggestion:ten[name][2]})),hiddenThemes:[...hiddenGroups].map(([name,positions])=>({name,title:tenText[name][0],meaning:ten[name][1],positions})),relations:data.relations,partial:known.length<4};
   }
   return {create};
 });

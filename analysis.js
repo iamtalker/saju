@@ -53,13 +53,23 @@
     // 득령·득지·득세
     const monthHidden=r.pillars[1]&&r.pillars[1].hidden;
     const monthBenCat=monthHidden&&monthHidden.length?category(STEM_EL[monthHidden[monthHidden.length-1].hanja],dayEl):null;
-    const deryeong=SUPPORT.includes(monthBenCat);
+    // 월주가 미확정이면 월지·월간이 더하는 비겁·인성을 알 수 없다. 각 조건은 참·거짓·알 수 없음(null)으로 두고,
+    // 충족 개수의 가능한 범위에서 판정이 하나로 정해질 때만 신강·신약·갈림을 쓰고 아니면 보류로 둔다.
+    const monthKnown=!!r.pillars[1];
     const dayHidden=r.pillars[2].hidden||[];
+    const deryeong=monthKnown?SUPPORT.includes(monthBenCat):null;
     const deuji=dayHidden.some(h=>SUPPORT.includes(category(STEM_EL[h.hanja],dayEl)));
-    const deuse=supportCount>=3;
-    const hits=[deryeong,deuji,deuse].filter(Boolean).length;
-    const verdict=hits===3?'신강':hits===0?'신약':'갈림';
-    const strength={deryeong,deuji,deuse,hits,verdict,supportCount,wealthCount,outputCount,officerCount};
+    // 미확정 연·월·시주는 각각 천간 1개와 지지 본기 1개를 비겁·인성으로 더할 수 있다(최대 2개씩).
+    // 확정된 글자만으로 3개 이상이면 참, 미확정 기둥이 판정을 바꿀 수 있으면 알 수 없음(null), 아니면 거짓.
+    const unknownSlots=[0,1,3].filter(i=>!r.pillars[i]).length*2;
+    const deuse=supportCount>=3?true:(supportCount+unknownSlots<3?false:null);
+    const tri=[deryeong,deuji,deuse];
+    const hitsMin=tri.filter(x=>x===true).length, hitsMax=hitsMin+tri.filter(x=>x===null).length;
+    const verdictOf=h=>h===3?'신강':h===0?'신약':'갈림';
+    const possible=new Set(); for(let h=hitsMin;h<=hitsMax;h++) possible.add(verdictOf(h));
+    const verdict=possible.size===1?[...possible][0]:'보류';
+    const hits=hitsMin===hitsMax?hitsMin:null;
+    const strength={deryeong,deuji,deuse,hits,hitsRange:[hitsMin,hitsMax],verdict,supportCount,wealthCount,outputCount,officerCount};
 
     // 격국: 월지 본기의 십성으로 정하고, 같은 십성이 천간에 드러났는지(투출) 본다
     const monthTen=monthHidden&&monthHidden.length?monthHidden[monthHidden.length-1].ten:null;
@@ -67,8 +77,8 @@
     const gyeokguk={name:monthTen?monthTen+'격':'미정',ten:monthTen,exposed};
 
     // 조후: 계절에 따른 필요 오행
-    const mb=r.pillars[1].branch;
-    const season=['亥','子','丑'].includes(mb)?'겨울':['巳','午','未'].includes(mb)?'여름':['寅','卯','辰'].includes(mb)?'봄':'가을';
+    const mb=monthKnown?r.pillars[1].branch:null;
+    const season=!mb?null:['亥','子','丑'].includes(mb)?'겨울':['巳','午','未'].includes(mb)?'여름':['寅','卯','辰'].includes(mb)?'봄':'가을';
     const johu=season==='겨울'?'화':season==='여름'?'수':null;
 
     // 종격 가능성: 신약인데 비겁·인성이 지장간에만 있는 경우
@@ -82,7 +92,9 @@
     else if(verdict==='신강'){ bu.용=produces(dayEl); bu.희=controls(dayEl); bu.기=[producedBy(dayEl),dayEl]; bu.한=controlledBy(dayEl); }
     // 조후와 억부가 어긋나면 갈림으로 본다
     let yong=null, status='정함', note='';
-    if(verdict==='갈림'){ status='갈림'; note='신강·신약 판정이 갈려 용신을 하나로 정하지 않습니다.'; }
+    if(!monthKnown){ status='보류'; note='월주가 확정되지 않아 월지의 계절(조후)과 격국을 볼 수 없어 용신을 보류합니다.'; }
+    else if(verdict==='보류'){ status='보류'; note='신강·신약을 정할 조건이 부족해 용신을 보류합니다.'; }
+    else if(verdict==='갈림'){ status='갈림'; note='신강·신약 판정이 갈려 용신을 하나로 정하지 않습니다.'; }
     else if(johu&&bu.용&&johu!==bu.용){ status='갈림'; note=`조후는 ${johu}, 억부는 ${bu.용}을 가리켜 어긋납니다.`; }
     else { yong=bu.용; if(johu&&johu===bu.용) note='조후와 억부가 같은 오행을 가리킵니다.'; }
     const wealthEl=controls(dayEl), outputEl=produces(dayEl), officerEl=controlledBy(dayEl), supportEl=producedBy(dayEl);
@@ -113,9 +125,9 @@
     const gg=r.pillars.map((p,i)=>p&&i===2&&GOEGANG.includes(p.hanja)?'일주':null).filter(Boolean);
     if(gg.length) sinsal.push({name:'괴강살',positions:gg.join('·'),note:'간지 기준'});
     // 12신살: 년지 삼합 기준
-    const yb=r.pillars[0].branch;
-    const start=SAMHAP_START[yb];
-    const twelve=r.pillars.map((p,i)=>p?{pos:['연지','월지','일지','시지'][i],b:p.branch,name:SHINSAL12[(branchOrder(p.branch)-branchOrder(start)+12)%12]}:null).filter(Boolean);
+    const yb=r.pillars[0]?r.pillars[0].branch:null;
+    const start=yb?SAMHAP_START[yb]:null;
+    const twelve=start?r.pillars.map((p,i)=>p?{pos:['연지','월지','일지','시지'][i],b:p.branch,name:SHINSAL12[(branchOrder(p.branch)-branchOrder(start)+12)%12]}:null).filter(Boolean):[];
     // 공망
     const ganjiIdx=Array.from({length:60},(_,i)=>i).find(i=>'甲乙丙丁戊己庚辛壬癸'[i%10]===dayStem&&'子丑寅卯辰巳午未申酉戌亥'[i%12]===day.branch);
     const xunStart=ganjiIdx-(ganjiIdx%10);
@@ -131,6 +143,7 @@
 
     // 판정 함수: 오행이 용신·희신·기신·한신 중 무엇인지
     const judge=el=>{
+      if(status==='보류') return '보류';
       if(status==='갈림') return '갈림';
       if(el===yong) return '용신';
       if(el===bu.희) return '희신';
@@ -175,7 +188,8 @@
     // 월운: 천간 가중치와 지지 가중치를 더한다. 용신 +2/+1, 희신 +1/+1, 기신 -2/-1
     const weight=(j,stemFlag)=>{ const s=stemFlag?{용신:2,희신:1,기신:-2,한신:0,중립:0,갈림:0}:{용신:1,희신:1,기신:-1,한신:0,중립:0,갈림:0}; return s[j]||0; };
     const KO_ST={갑:'甲',을:'乙',병:'丙',정:'丁',무:'戊',기:'己',경:'庚',신:'辛',임:'壬',계:'癸'};
-    const months=(r.extras&&r.extras.monthlyFlow||[]).map(m=>{ const st=judgeStem(KO_ST[m.pillar[0]]); const hb=Object.keys(KO_BR).find(k=>KO_BR[k]===m.pillar[1]); const br=judgeBranch(hb); let score=weight(st,true)+weight(br,false); const stemCat=category(STEM_EL[KO_ST[m.pillar[0]]],dayEl); if(verdict==='신약'&&(stemCat==='재성'||stemCat==='관성')) score-=1; const hbr=hb; const rels=relationsWith(KO_ST[m.pillar[0]],hbr); const chung=rels.filter(x=>x.kind==='충').length; score-=2*chung; const level=score>=1?'좋은 달':score===0?'보통':'주의'; return {month:m.month,pillar:m.pillar,stem:st,branch:br,score,good:score>=1,level,rels,chung,gm:gmOf(hbr),note:m.note||''}; });
+    // 월운은 용신 판정이 필요하므로 월주가 확정되지 않으면 계산하지 않는다.
+    const months=status==='보류'?[]:(r.extras&&r.extras.monthlyFlow||[]).map(m=>{ const st=judgeStem(KO_ST[m.pillar[0]]); const hb=Object.keys(KO_BR).find(k=>KO_BR[k]===m.pillar[1]); const br=judgeBranch(hb); let score=weight(st,true)+weight(br,false); const stemCat=category(STEM_EL[KO_ST[m.pillar[0]]],dayEl); if(verdict==='신약'&&(stemCat==='재성'||stemCat==='관성')) score-=1; const hbr=hb; const rels=relationsWith(KO_ST[m.pillar[0]],hbr); const chung=rels.filter(x=>x.kind==='충').length; score-=2*chung; const level=score>=1?'좋은 달':score===0?'보통':'주의'; return {month:m.month,pillar:m.pillar,stem:st,branch:br,score,good:score>=1,level,rels,chung,gm:gmOf(hbr),note:m.note||''}; });
 
     return {dayEl,strength,gyeokguk,season,johu,jong,bu,yong,status,note,natal:{relations,stemRel,twelve,gongmang,gongmangBranches:GM.map(b=>({b,judge:judgeBranch(b)})),elCount,lacking,excess,sinsal},years,cycles:cyclesJudged,months,
       criteria:{strength:'득령: 월지 본기가 비겁·인성. 득지: 일지 지장간에 비겁·인성이 있음. 득세: 천간 3개와 지지 본기 4개 중 비겁·인성이 3개 이상. 3개면 신강, 0개면 신약, 1~2개면 갈림.',johu:'亥·子·丑월은 火, 巳·午·未월은 水를 필요 오행으로 봅니다. 봄·가을은 따로 보지 않습니다.',yong:'신약이면 인성을 용신, 비겁을 희신으로 봅니다. 신강이면 식상을 용신, 재성을 희신으로 봅니다. 조후와 억부가 어긋나면 갈림입니다.',gi:'신약에서는 재성과 식상이 기신, 관성은 한신입니다. 신강에서는 인성과 비겁이 기신이고, 관성은 한신입니다. 용신을 낳는 오행은 기신으로 두지 않습니다.',month:'월운은 천간에 가중치 용신 +2, 희신 +1, 기신 -2, 지지에 용신 +1, 희신 +1, 기신 -1을 더합니다. 신약이면 천간이 재성·관성인 달은 추가로 -1, 원국 지지와 충이 있으면 충 하나마다 -2를 합니다. 합계 1점 이상이면 좋은 달, 0점이면 보통, 음수이면 주의입니다.',relations:'세운·대운·월운의 지지와 천간을 원국 네 기둥과 대조합니다. 천간합, 지지 충·육합·형·파·해·원진·귀문·자형을 식별하고, 방합·삼합은 원국 지지와 합쳐 완성되는 경우만 봅니다. 귀문은 子酉·丑午·寅未·卯申·辰亥·巳戌 여섯 쌍입니다.',shinsal:'천을귀인과 문창귀인, 양인살은 일간 기준, 백호살과 괴강살은 간지 기준, 12신살은 년지 삼합 기준입니다. 공망은 일주 기준으로 午·未 같은 두 지지를 구하고, 그 지지가 용신·희신·기신 중 무엇인지 적습니다. 세운·대운·월운의 지지가 공망 지지이면 공망으로 표시합니다.',gyeok:'격은 월지 본기의 십성으로 정하고, 같은 십성이 천간에 드러나면 투출로 봅니다.',

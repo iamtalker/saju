@@ -4,7 +4,7 @@ const path=require('path');
 const {calculate}=require('./engine');
 const port=Number(process.env.SAJU_PORT)||3210;
 const pkg=require('./package.json');
-const files={'/':['index.html','text/html; charset=utf-8'],'/app.js':['app.js','text/javascript; charset=utf-8'],'/reading.js':['reading.js','text/javascript; charset=utf-8'],'/fun-reading.js':['fun-reading.js','text/javascript; charset=utf-8'],'/style.css':['style.css','text/css; charset=utf-8']};
+const files={'/':['index.html','text/html; charset=utf-8'],'/app.js':['app.js','text/javascript; charset=utf-8'],'/reading.js':['reading.js','text/javascript; charset=utf-8'],'/fun-reading.js':['fun-reading.js','text/javascript; charset=utf-8'],'/profile.js':['profile.js','text/javascript; charset=utf-8'],'/style.css':['style.css','text/css; charset=utf-8']};
 const server=http.createServer((req,res)=>{
   if(req.method==='GET'&&req.url==='/'){ return fs.readFile(path.join(__dirname,'index.html'),'utf8',(error,html)=>{ if(error){res.writeHead(500);return res.end();} res.writeHead(200,{'Content-Type':'text/html; charset=utf-8'}); res.end(html.replace('__APP_VERSION__',pkg.version)); }); }
   if(req.method==='GET'&&files[req.url]){const [name,type]=files[req.url];res.writeHead(200,{'Content-Type':type});return fs.createReadStream(path.join(__dirname,name)).pipe(res);}
