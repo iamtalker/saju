@@ -23,7 +23,8 @@ function instant(y,m,d,h,min) {
 function eight(ms, offset) { const d = new Date(ms + offset*60000); return Solar.fromYmdHms(d.getUTCFullYear(), d.getUTCMonth()+1, d.getUTCDate(), d.getUTCHours(), d.getUTCMinutes(), 0).getLunar().getEightChar(); }
 function describe(p, dayStem) {
   const a=stems.indexOf(p[0]), b=branches.indexOf(p[1]), di=stems.indexOf(dayStem);
-  const sipsin = n => ten[(Math.floor(n/2)-Math.floor(di/2)+5)%5][n%2===di%2?0:1];
+  // 일간이 없으면(일주 미확정) 십성은 계산하지 않는다.
+  const sipsin = n => di<0?null:ten[(Math.floor(n/2)-Math.floor(di/2)+5)%5][n%2===di%2?0:1];
   return { hanja:p, hangul:koreanStem[a]+koreanBranch[b], stem:p[0], branch:p[1], stemElement:elements[Math.floor(a/2)], branchElement:branchElements[b], stemYin:a%2?'음':'양', branchYin:b%2?'음':'양', stemTen:sipsin(a), hidden:[...hidden[b]].map(x=>({hanja:x, hangul:koreanStem[stems.indexOf(x)], ten:sipsin(stems.indexOf(x))})) };
 }
 const animals=['쥐','소','호랑이','토끼','용','뱀','말','양','원숭이','닭','개','돼지'];
@@ -68,6 +69,8 @@ function calculateCore(input) {
   const uncertainDay=unknown&&(input.dayBoundary==='23'||standard.getUTCHours()!==hm[0]||correction!==0);
   if(unknown&&uncertainDay&&input.dayBoundary==='00') warning.push('시간 보정으로 일주가 바뀔 가능성이 있어 확정하지 않습니다.');
   const pillars=[yearP,monthP,uncertainDay?null:day,unknown?null:hourPillar];
+  // 일주가 미확정이면 임시 일간(정오 기준 값)으로 십성·신강약·공망을 만들지 않는다.
+  const dayStemOpt=uncertainDay?null:day[0];
   // 세운·대운 지지와 천간이 원국과 맺는 관계를 식별한다. 합·형·충은 관계의 존재만 표시한다.
   const stemHapPairs={'甲':'己','己':'甲','乙':'庚','庚':'乙','丙':'辛','辛':'丙','丁':'壬','壬':'丁','戊':'癸','癸':'戊'};
   const branchHapPairs={'子':'丑','丑':'子','寅':'亥','亥':'寅','卯':'戌','戌':'卯','辰':'酉','酉':'辰','巳':'申','申':'巳','午':'未','未':'午'};
@@ -131,12 +134,13 @@ function calculateCore(input) {
   const dayGzDay=day;
   const sipCounts={};
   const addTen=n=>{ if(n) sipCounts[n]=(sipCounts[n]||0)+1; };
-  pillars.forEach((p,i)=>{ if(!p) return; if(i!==2) addTen(describe(p,day[0]).stemTen); const h=describe(p,day[0]).hidden; addTen(h[h.length-1].ten); });
-  const sipsinCount=Object.entries(sipCounts).map(([name,count])=>({name,count})).sort((a,b)=>b.count-a.count);
+  if(!uncertainDay) pillars.forEach((p,i)=>{ if(!p) return; if(i!==2) addTen(describe(p,dayStemOpt).stemTen); const h=describe(p,dayStemOpt).hidden; addTen(h[h.length-1].ten); });
+  const sipsinCount=uncertainDay?null:Object.entries(sipCounts).map(([name,count])=>({name,count})).sort((a,b)=>b.count-a.count);
   const prevYearGz=toKo(Solar.fromYmdHms(nowKst[0]-1,6,1,12,0,0).getLunar().getYearInGanZhi());
   const monthlyFlow=Array.from({length:12},(_,i)=>{ const m=i+1; const gz=Solar.fromYmdHms(nowKst[0],m,15,12,0,0).getLunar().getMonthInGanZhiExact(); return {month:m,pillar:toKo(gz),note:m===1?`입춘 전이라 전년(${prevYearGz}년)에 속함`:''}; });
   const todayGz=Solar.fromYmdHms(nowKst[0],nowKst[1],nowKst[2],12,0,0).getLunar().getDayInGanZhi();
-  const extras={animal:animals[branches.indexOf(yearP?yearP[1]:day[1])]||null, gongmang:gongmangOf(day), sipsinCount, monthlyFlow, year:nowKst[0], today:{date:`${nowKst[0]}-${String(nowKst[1]).padStart(2,'0')}-${String(nowKst[2]).padStart(2,'0')}`, pillar:toKo(todayGz)}};
+  // 띠는 연주 기준이다. 연주가 미확정이면 일지로 대신하지 않는다.
+  const extras={animal:yearP?animals[branches.indexOf(yearP[1])]||null:null, gongmang:uncertainDay?null:gongmangOf(day), sipsinCount, monthlyFlow, year:nowKst[0], today:{date:`${nowKst[0]}-${String(nowKst[1]).padStart(2,'0')}-${String(nowKst[2]).padStart(2,'0')}`, pillar:toKo(todayGz)}};
   let trueSolar=null;
   if(input.longitude!==undefined&&input.longitude!==''&&!unknown){
     const lon=Number(input.longitude);
@@ -149,20 +153,9 @@ function calculateCore(input) {
     trueSolar={time:String(Math.floor(norm/60)).padStart(2,'0')+':'+String(norm%60).padStart(2,'0'),longitude:lon,diffMinutes:Math.round(diff*10)/10,equationMinutes:Math.round(eot*10)/10};
   }
   extras.trueSolar=trueSolar;
-  // 신강·신약 충족 여부. 점수를 만들지 않고, 세 조건의 충족 개수로만 판정한다.
-  // 득령: 월지 본기가 비겁·인성. 득지: 일지 지장간 중 비겁·인성이 하나라도 있음.
-  // 득세: 일간을 제외한 천간 3개와 지지 본기 4개 중 비겁·인성이 2개 이상.
-  // 판정: 3개 충족 신강, 0개 신약, 1~2개 갈림.
-  const SUPPORT=['비견','겁재','편인','정인'];
-  const described=pillars.map(p=>p?describe(p,day[0]):null);
-  const deryeong=!!(described[1]&&SUPPORT.includes(described[1].hidden[described[1].hidden.length-1].ten));
-  const deuji=!!(described[2]&&described[2].hidden.some(h=>SUPPORT.includes(h.ten)));
-  let supportCount=0;
-  described.forEach((d,i)=>{ if(!d) return; if(i!==2&&SUPPORT.includes(d.stemTen)) supportCount++; const h=d.hidden; if(h.length&&SUPPORT.includes(h[h.length-1].ten)) supportCount++; });
-  const deuse=supportCount>=3;
-  const hits=[deryeong,deuji,deuse].filter(Boolean).length;
-  const strength={deryeong,deuji,deuse,hits,verdict:hits===3?'신강':hits===0?'신약':'갈림',supportCount};
-  return { strength, extras, solar:`${y}년 ${m}월 ${d}일`, lunar:`${lunar.year}년 ${lunar.isLeapMonth?'윤':''}${lunar.month}월 ${lunar.day}일`, pillars:pillars.map(p=>p?describe(p,day[0]):null), relations, yearCycles, daeun, warning, standardTime:unknown?null:fmt(standard), adjustedTime:unknown?null:fmt(adjusted), correction, dst:!unknown && (standard.getUTCHours()!==hm[0] || standard.getUTCDate()!==d), boundary:input.dayBoundary };
+  // 신강·신약은 analysis.js가 판정하며, calculate()에서 연결한다.
+  const strength=null;
+  return { strength, extras, solar:`${y}년 ${m}월 ${d}일`, lunar:`${lunar.year}년 ${lunar.isLeapMonth?'윤':''}${lunar.month}월 ${lunar.day}일`, pillars:pillars.map(p=>p?describe(p,dayStemOpt):null), relations, yearCycles, daeun, warning, standardTime:unknown?null:fmt(standard), adjustedTime:unknown?null:fmt(adjusted), correction, dst:!unknown && (standard.getUTCHours()!==hm[0] || standard.getUTCDate()!==d), boundary:input.dayBoundary };
 }
 // 경계 근처 출생(자시 전후 60분, 절입 전후 60분)에는 다른 기준으로 계산한 명식을 함께 보여 준다.
 function nearBoundary(input, standardText, instantMs){
@@ -185,12 +178,16 @@ const pillarKey=r=>r.pillars.map(p=>p?p.hangul:'-').join(' ');
 function calculate(input){
   const r=calculateCore(input);
   const out=input.unknown?r:withBoundary(input, r);
-  try{ out.analysis=SajuAnalysis.analyze(out); }catch(error){ out.analysis=null; }
+  // 일간이 확정되지 않으면 판정 결과(격국·용신·풀이 문단 등)를 만들지 않는다.
+  out.analysis=null;
+  if(out.pillars[2]){ try{ out.analysis=SajuAnalysis.analyze(out); }catch(error){ out.analysis=null; } }
+  out.strength=out.analysis?out.analysis.strength:null;
   return out;
 }
 function withBoundary(input, r){
   if(!r.standardTime) return r;
-  const reasons=nearBoundary(input, r.standardTime, Date.parse(r.standardTime.replace(' ','T')+':00+09:00')-540*60000);
+  // standardTime은 이미 한국 표준시 벽시계 문자열이므로, +09:00으로 파싱하면 실제 출생 순간이 된다.
+  const reasons=nearBoundary(input, r.standardTime, Date.parse(r.standardTime.replace(' ','T')+':00+09:00'));
   if(!reasons.length) return r;
   const alternatives=[];
   const other=input.dayBoundary==='23'?'00':'23';

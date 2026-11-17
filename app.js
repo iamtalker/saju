@@ -107,7 +107,7 @@ form.addEventListener('change',()=>{syncForm();saveForm();});
 function renderReadingToc(reading){
   const toc=[
     ['reading-fun-all','종합 풀이',true],['reading-criteria','계산 기준',true],['reading-pillars','네 기둥의 자리와 십이운성',true],
-    ['reading-day','나의 중심 · 일간',Boolean(reading.day)],
+    ['reading-day','나의 중심 · 일간',Boolean(reading.day)],['reading-strength','신강·신약 판정',Boolean(reading.day)],['reading-profile','성격·직업·재물',Boolean(reading.day)],
     ['reading-elements','오행의 분포',true],
     ['reading-season','태어난 달 · 월지',Boolean(reading.season)],
     ['reading-ten','천간 십성',Boolean(reading.day)],
@@ -127,7 +127,7 @@ function renderReading(data,reading){
   const dayHtml=reading.day?`<article id="reading-day" class="reading-card"><span>나의 중심 · 일간</span><h3>${reading.day.name}(${reading.day.hanja}), ${reading.day.metaphor}의 이미지</h3><p>명리에서는 ${withJosa(reading.day.name,'을','를')} ${reading.day.image}에 비유하며, ${withJosa(reading.day.theme,'과','와')} 연결해 읽습니다. 이는 일간 하나의 상징이므로 다른 글자와 함께 살펴야 합니다.</p></article>`:`<article class="reading-card"><h3>일간 풀이를 확정하기 어려워요</h3><p>출생시간에 따라 일주가 달라질 수 있어 일간과 십성 해석은 보류합니다.</p></article>`;
   const elementCounts=Object.entries(reading.counts).map(([name,count])=>`<div><b>${name}</b><strong>${count}</strong></div>`).join('');
   const elementCard=`<article id="reading-elements" class="reading-card"><span>오행의 분포</span><h3>${reading.prominent.length?`${withJosa(reading.prominent.join('·'),'이','가')} 보이는 글자에서 많아요`:'오행을 확인할 수 없어요'}</h3><div class="element-count">${elementCounts}</div><p>확정된 ${reading.knownCount}글자의 천간과 지지 대표 오행을 한 번씩 셌습니다. ${reading.prominent.length?`${reading.prominent.map(x=>`${withJosa(x,'은','는')} ${reading.elementText[x]}`).join(', ')}의 상징과 연결해 살펴볼 수 있습니다.`:''} ${reading.missing.length?`표면에 ${withJosa(reading.missing.map(koBranch).join('·'),'이','가')} 보이지 않습니다.`:'다섯 오행이 표면에 모두 나타납니다.'}</p></article>`;
-  const seasonCard=reading.season?`<article id="reading-season" class="reading-card"><span>태어난 달 · 월지</span><h3>${reading.season.branch}(${reading.season.element})에 담긴 기운</h3><p>${({인:'봄',묘:'봄',진:'봄',사:'여름',오:'여름',미:'여름',신:'가을',유:'가을',술:'가을',해:'겨울',자:'겨울',축:'겨울'})[reading.season.branch]}의 달에 태어났습니다.</p><p>월지는 태어난 달의 지지로 계절을 살피는 자리입니다. ${reading.season.branch} 안의 지장간은 ${[...new Set(reading.season.ten)].join('·')} 십성으로 분류됩니다. 월령과 지장간을 해석하는 방식은 학파마다 달라, 여기서는 구성만 보여 줍니다.</p></article>`:'';
+  const seasonCard=reading.season?`<article id="reading-season" class="reading-card"><span>태어난 달 · 월지</span><h3>${reading.season.branch}(${reading.season.element})에 담긴 기운</h3><p>${({인:'봄',묘:'봄',진:'봄',사:'여름',오:'여름',미:'여름',신:'가을',유:'가을',술:'가을',해:'겨울',자:'겨울',축:'겨울'})[reading.season.branch]}의 달에 태어났습니다.</p><p>월지는 태어난 달의 지지로 계절을 살피는 자리입니다. ${reading.season.ten?`${reading.season.branch} 안의 지장간은 ${[...new Set(reading.season.ten)].join('·')} 십성으로 분류됩니다. `:'일주가 확정되지 않아 지장간 십성은 표시하지 않습니다. '}월령과 지장간을 해석하는 방식은 학파마다 달라, 여기서는 구성만 보여 줍니다.</p></article>`:'';
   const tenThemes=reading.tenThemes.length?reading.tenThemes.map(t=>`<div class="theme"><b>${t.name} · ${t.title}</b><small>${t.positions.join('·')}에 나타남</small><p>전통적으로 ${t.meaning}로 읽습니다. ${t.suggestion}</p></div>`).join(''):'확정된 다른 천간이 없어 십성 주제를 표시하지 않습니다.';
   const tenCard=reading.day?`<article id="reading-ten" class="reading-card"><span>관계와 활동 · 천간 십성</span><h3>겉으로 드러난 관계 주제</h3>${tenThemes}<p class="reading-note">천간과 지장간의 십성을 구분해 표시합니다. 지장간은 배열 목록입니다.</p></article>`:'';
   const hiddenThemes=reading.hiddenThemes.length?reading.hiddenThemes.map(t=>`<div class="theme"><b>${t.name} · ${t.title}</b><small>${t.positions.map(p=>`${p.position}: ${p.characters.join('·')}`).join(' / ')}</small><p>${t.meaning}. 각 지장간을 일간과 대조한 목록입니다.</p></div>`).join(''):'확정된 지지의 지장간이 없습니다.';
@@ -154,26 +154,28 @@ const funStems={'甲':'한번 정한 방향은 끝까지 밀고 가는 편이라
   const spouseText=data.pillars[2]?`일지는 ${data.pillars[2].hangul[1]}입니다.`:'일지를 확정하지 못했습니다.';
   const dohwa=(reading.shinsal||[]).some(s=>s.name==='도화살');
   const ex=data.extras;
-  const extrasCard=ex?`<article id="reading-extras" class="reading-card"><span>계산 항목</span><h3>띠, 공망, 십신 개수, 올해 월운·오늘 일진</h3><p><b>띠:</b> ${escapeHtml(ex.animal||'')}띠 (년지 기준)</p><p><b>공망:</b> 일주 기준 공망 지지 ${escapeHtml(ex.gongmang)}</p><p><b>십신 개수:</b> ${ex.sipsinCount.map(s=>`${escapeHtml(s.name)} ${'█'.repeat(s.count)} ${s.count}`).join('<br>')||'없음'} (천간 3개와 지지 본기 4개 기준)</p><p><b>${ex.year}년 월별 간지:</b> ${ex.monthlyFlow.map(m=>`${m.month}월 ${escapeHtml(m.pillar)}`).join(' · ')} (각 월 15일 기준)</p><p><b>오늘 일진:</b> ${escapeHtml(ex.today.date)} ${escapeHtml(ex.today.pillar)}</p>${ex.trueSolar?`<p><b>진태양시(참고):</b> ${ex.trueSolar.time} · 표준시와 ${ex.trueSolar.diffMinutes}분 차이 (균시차 ${ex.trueSolar.equationMinutes}분 포함, 경도 ${ex.trueSolar.longitude}°)</p>`:''}</article>`:'';
-  const sg=data.strength;
-  const sgRow=(ok,name,rule)=>`<div class="theme"><b>${name}: ${ok?'충족':'미충족'}</b><p>${rule}</p></div>`;
-  const strengthCard=sg?`<article id="reading-strength" class="reading-card"><span>신강·신약 충족 여부</span><h3>${sg.verdict}</h3>${sgRow(sg.deryeong,'득령','월지 본기가 일간을 돕는 비겁·인성인지 봅니다.')}${sgRow(sg.deuji,'득지','일지 지장간 중 비겁·인성이 하나라도 있는지 봅니다.')}${sgRow(sg.deuse,'득세','일간을 뺀 천간 3개와 지지 본기 4개 중 비겁·인성이 2개 이상인지 봅니다.')}<p class="reading-note">충족 개수 3개는 신강, 0개는 신약, 1~2개는 갈림입니다. 점수는 쓰지 않습니다. 득지와 득세의 정의는 이 구현의 선택입니다.</p></article>`:'';
+  const extrasCard=ex?`<article id="reading-extras" class="reading-card"><span>계산 항목</span><h3>띠, 공망, 십신 개수, 올해 월운·오늘 일진</h3><p><b>띠:</b> ${ex.animal?`${escapeHtml(ex.animal)}띠 (년지 기준)`:'연주가 확정되지 않아 계산하지 않습니다'}</p><p><b>공망:</b> ${ex.gongmang?`일주 기준 공망 지지 ${escapeHtml(ex.gongmang)}`:'일주가 확정되지 않아 계산하지 않습니다'}</p><p><b>십신 개수:</b> ${ex.sipsinCount?`${ex.sipsinCount.map(s=>`${escapeHtml(s.name)} ${'█'.repeat(s.count)} ${s.count}`).join('<br>')||'없음'} (천간 3개와 지지 본기 4개 기준)`:'일주가 확정되지 않아 계산하지 않습니다'}</p><p><b>${ex.year}년 월별 간지:</b> ${ex.monthlyFlow.map(m=>`${m.month}월 ${escapeHtml(m.pillar)}`).join(' · ')} (각 월 15일 기준)</p><p><b>오늘 일진:</b> ${escapeHtml(ex.today.date)} ${escapeHtml(ex.today.pillar)}</p>${ex.trueSolar?`<p><b>진태양시(참고):</b> ${ex.trueSolar.time} · 표준시와 ${ex.trueSolar.diffMinutes}분 차이 (균시차 ${ex.trueSolar.equationMinutes}분 포함, 경도 ${ex.trueSolar.longitude}°)</p>`:''}</article>`:'';
+  const sa=data.analysis&&data.analysis.strength;
+  const sgRow=(ok,name,rule)=>`<div class="theme"><b>${name}: ${ok===null?'보류':ok?'충족':'미충족'}</b><p>${rule}</p></div>`;
+  const sgLo=sa?sa.hitsRange[0]:0, sgHi=sa?sa.hitsRange[1]:0;
+  const sgCount=!sa?'':sa.hits!==null?`현재 충족 개수는 ${sa.hits}개입니다.`:sa.verdict==='보류'?`월주가 확정되지 않아 충족 개수는 ${sgLo}~${sgHi}개 범위에 있고, 그 안에서 판정이 하나로 정해지지 않아 보류합니다.`:`월주가 확정되지 않아 충족 개수는 ${sgLo}~${sgHi}개 범위에 있으며, 그 범위의 모든 경우가 ${sa.verdict}로 정해집니다.`;
+  const strengthCard=sa?`<article id="reading-strength" class="reading-card"><span>신강·신약 충족 여부</span><h3>${sa.verdict==='보류'?'판정 보류':sa.verdict}</h3>${sgRow(sa.deryeong,'득령',sa.deryeong===null?'월주가 확정되지 않아 월지 본기를 볼 수 없으므로 보류합니다.':'월지 본기가 일간을 돕는 비겁·인성인지 봅니다.')}${sgRow(sa.deuji,'득지','일지 지장간 중 비겁·인성이 하나라도 있는지 봅니다.')}${sgRow(sa.deuse,'득세','일간을 뺀 천간 3개와 지지 본기 4개 중 비겁·인성이 3개 이상인지 봅니다.')}<p class="reading-note">충족 개수 3개는 신강, 0개는 신약, 1~2개는 갈림입니다. ${sgCount} 점수는 쓰지 않습니다. 득지의 정의는 이 구현의 선택입니다.</p></article>`:'';
   const conventionCard=`<article id="reading-convention" class="reading-card"><span>관례 설명</span><h3>재물과 연애의 상징</h3><p><b>재물:</b> 사주 관례에서 재성(편재·정재)은 재물과 자원을 상징합니다. ${wealthText}</p><p><b>연애:</b> 관례에서 일지는 배우자 자리로 봅니다. ${spouseText}${dohwa?' 원국에 도화살 표식도 보입니다. 관례에서 도화는 이성 관계의 상징으로 풀이합니다.':''}</p></article>`;
   const funText=data.pillars[2]?funStems[data.pillars[2].stem]:null;
   const funCard=funText?`<article id="reading-fun" class="reading-card"><span>일간 한 줄</span><h3>일간 ${escapeHtml(data.pillars[2].hangul)}의 한 줄</h3><p>${escapeHtml(funText)}</p></article>`:'';
-  return `<section class="reading"><div class="section-label">03 · 사주 풀이</div><h2>나의 사주 읽어보기</h2><p class="reading-intro">전통 명리의 상징을 바탕으로 원국의 글자를 풀어봅니다. ${reading.partial?'확정된 기둥만 살펴본 부분 풀이입니다.':'태어난 시각까지 포함한 여덟 글자를 살펴봅니다.'}</p>${window.FunReading?window.FunReading.build(data):''}<article id="reading-pillars" class="reading-card"><span>네 기둥의 자리와 십이운성</span>${pillarGuide}<p class="reading-note">십이운성은 화토동궁, 양간 순행·음간 역행 기준입니다. 戊의 장생은 寅으로 봅니다. 전통적 분류입니다.</p></article>${dayHtml}${elementCard}${seasonCard}${tenCard}${hiddenCard}${relationCard}${shinsalCard}${extrasCard}<article id="reading-criteria" class="reading-card"><span>계산 기준</span><h3>판정에 쓴 기준</h3>${Object.entries((data.analysis&&data.analysis.criteria)||{}).map(([k,v])=>`<div class="theme"><b>${escapeHtml({strength:'신강·신약 판정',johu:'조후',yong:'용신·희신·기신',gi:'기신·한신',month:'월운',relations:'관계 식별',shinsal:'신살과 공망',gyeok:'격국',hap:'합과 합화',branchRule:'지지의 방합·삼합과 丑·辰'}[k]||k)}</b><p>${escapeHtml(v)}</p></div>`).join("")}<p class="reading-note">사주는 근거 없는 점술입니다. 이 풀이는 재미로만 봐 주세요.</p><p class="reading-note">버전 v${data.version}</p></article></section>`;
+  return `<section class="reading"><div class="section-label">03 · 사주 풀이</div><h2>나의 사주 읽어보기</h2><p class="reading-intro">전통 명리의 상징을 바탕으로 원국의 글자를 풀어봅니다. ${reading.partial?'확정된 기둥만 살펴본 부분 풀이입니다.':'태어난 시각까지 포함한 여덟 글자를 살펴봅니다.'}</p>${window.FunReading?window.FunReading.build(data,window.ProfileReading.toHtml(window.ProfileReading.build(data))):''}<article id="reading-pillars" class="reading-card"><span>네 기둥의 자리와 십이운성</span>${pillarGuide}<p class="reading-note">십이운성은 화토동궁, 양간 순행·음간 역행 기준입니다. 戊의 장생은 寅으로 봅니다. 전통적 분류입니다.</p></article>${dayHtml}${strengthCard}${elementCard}${seasonCard}${tenCard}${hiddenCard}${relationCard}${shinsalCard}${extrasCard}<article id="reading-criteria" class="reading-card"><span>계산 기준</span><h3>판정에 쓴 기준</h3>${Object.entries((data.analysis&&data.analysis.criteria)||{}).map(([k,v])=>`<div class="theme"><b>${escapeHtml({strength:'신강·신약 판정',johu:'조후',yong:'용신·희신·기신',gi:'기신·한신',month:'월운',relations:'관계 식별',shinsal:'신살과 공망',gyeok:'격국',hap:'합과 합화',branchRule:'지지의 방합·삼합과 丑·辰'}[k]||k)}</b><p>${escapeHtml(v)}</p></div>`).join("")}<p class="reading-note">사주는 근거 없는 점술입니다. 이 풀이는 재미로만 봐 주세요.</p><p class="reading-note">버전 v${data.version}</p></article></section>`;
 }
 function renderMarkdown(data,reading){
-  const lines=['# 사주 풀이','',`양력: ${data.solar}`,`음력: ${data.lunar}`,'','## 네 기둥','', '| 기둥 | 간지 | 십성 |','|---|---|---|'];
+  const lines=['# 사주 풀이','',`양력: ${data.solar}`,`음력: ${data.lunar}`,'',...window.FunReading.bridgeMarkdown(data),'','## 네 기둥','', '| 기둥 | 간지 | 십성 |','|---|---|---|'];
   for(let i=0;i<4;i++){
     const p=data.pillars[i];
-    lines.push(`| ${pillarNames[i]} | ${p?`${p.stem}${p.branch} (${p.hangul})`:'미상'} | ${p?(i===2?'일간':p.stemTen):'미상'} |`);
+    lines.push(`| ${pillarNames[i]} | ${p?`${p.stem}${p.branch} (${p.hangul})`:'미상'} | ${p?(i===2?'일간':(data.pillars[2]?p.stemTen:'일주 미확정')):'미상'} |`);
   }
   lines.push('','## 네 기둥의 자리와 십이운성','');
-  for(let i=0;i<4;i++)lines.push(`- **${pillarNames[i]}**: ${reading.pillarGuides[i]}${reading.twelve?` · 십이운성 ${reading.twelve[i]}`:''}`);
+  for(let i=0;i<4;i++)lines.push(`- **${pillarNames[i]}**: ${reading.pillarGuides[i]}${reading.twelve&&reading.twelve[i]?` · 십이운성 ${reading.twelve[i]}`:''}`);
   if(reading.day)lines.push('','## 나의 중심 · 일간','',`${reading.day.name}(${reading.day.hanja})은 명리에서 ${reading.day.image}에 비유합니다. ${reading.day.theme}.`);
   lines.push('','## 오행의 분포','',...Object.entries(reading.counts).map(([name,count])=>`- ${name}: ${count}`),'',`천간과 지지 대표 오행 ${reading.knownCount}글자를 단순 집계했습니다. ${reading.missing.length?`표면에 보이지 않는 오행: ${reading.missing.join('·')}.`:''} `);
-  if(reading.season)lines.push('','## 태어난 달 · 월지','',`월지 ${reading.season.branch}(${reading.season.element})의 지장간 십성 분류: ${[...new Set(reading.season.ten)].join('·')}.`);
+  if(reading.season)lines.push('','## 태어난 달 · 월지','',`월지 ${reading.season.branch}(${reading.season.element})${reading.season.ten?`의 지장간 십성 분류: ${[...new Set(reading.season.ten)].join('·')}`:'(일주 미확정으로 지장간 십성은 생략)'}.`);
   if(reading.tenThemes.length)lines.push('','## 천간 십성','',...reading.tenThemes.map(t=>`- **${t.name} (${t.positions.join('·')})**: ${t.meaning}. ${t.suggestion}`));
   if(reading.hiddenThemes.length)lines.push('','## 지장간 십성','',...reading.hiddenThemes.map(t=>`- **${t.name}** — ${t.positions.map(p=>`${p.position}: ${p.characters.join('·')}`).join(' / ')}: ${t.meaning}.`));
   lines.push('','## 글자 사이의 관계','',reading.relations.length?reading.relations.map(r=>`- ${r.positions}: ${r.characters} ${r.name}${r.element?`(${r.element})`:''}${r.complete===false?` 미완성 방합, 빠진 글자 ${r.missing.join('·')}(합이 성립하지 않음)`:''}`).join('\n'):'확정된 기둥에서 표시 대상 관계가 발견되지 않았습니다.');
@@ -183,8 +185,9 @@ function renderMarkdown(data,reading){
   const daeun=data.daeun;
   const daeunLines=daeun?.available?[`- 순역행: ${daeun.direction} (${daeun.yearStem}년 ${daeun.sex==='male'?'남성':'여성'} 기준)`,`- 첫 대운 시작: 약 ${daeun.startAge} · ${daeun.startDate}`,...daeun.cycles.map((c,i)=>`- ${i+1}대운 ${c.pillar}: 만 ${Math.floor(c.fromAgeMonths/12)}세부터 ${Math.floor(c.toAgeMonths/12)-1}세까지 · 약 ${c.startDate}~${c.endDate}${c.natalClashes.length?` · 지지 ${c.branch}(${koBranch(c.branch)})${josaOf(koBranch(c.branch),"과","와")} 원국 ${c.natalClashes.join('·')} 충`:''}`)]:[`- ${daeun?.reason||'출생시간과 대운 계산 기준 성별이 필요합니다.'}`];
   const ex=data.extras;
-  if(ex) lines.push('','## 계산 항목','',`- 띠: ${ex.animal}띠 (년지 기준)`,`- 공망: ${ex.gongmang}`,`- 십신 개수: ${ex.sipsinCount.map(s=>`${s.name} ${s.count}`).join(' · ')||'없음'}`,`- ${ex.year}년 월별 간지: ${ex.monthlyFlow.map(m=>`${m.month}월 ${m.pillar}`).join(' · ')} (각 월 15일 기준)`,`- 오늘 일진(${ex.today.date}): ${ex.today.pillar}`,...(ex.trueSolar?[`- 진태양시(참고): ${ex.trueSolar.time}, 표준시와 ${ex.trueSolar.diffMinutes}분 차이 (경도 ${ex.trueSolar.longitude}°)`]:[]));
+  if(ex) lines.push('','## 계산 항목','',`- 띠: ${ex.animal?`${ex.animal}띠 (년지 기준)`:'연주 미확정으로 계산하지 않음'}`,`- 공망: ${ex.gongmang||'일주 미확정으로 계산하지 않음'}`,`- 십신 개수: ${ex.sipsinCount?(ex.sipsinCount.map(s=>`${s.name} ${s.count}`).join(' · ')||'없음'):'일주 미확정으로 계산하지 않음'}`,`- ${ex.year}년 월별 간지: ${ex.monthlyFlow.map(m=>`${m.month}월 ${m.pillar}`).join(' · ')} (각 월 15일 기준)`,`- 오늘 일진(${ex.today.date}): ${ex.today.pillar}`,...(ex.trueSolar?[`- 진태양시(참고): ${ex.trueSolar.time}, 표준시와 ${ex.trueSolar.diffMinutes}분 차이 (경도 ${ex.trueSolar.longitude}°)`]:[]));
   lines.push('','## 대운 흐름','',...daeunLines,'','순역행은 양년 남성·음년 여성 순행, 음년 남성·양년 여성 역행 기준입니다. 3일=1년으로 환산하고 시작 나이는 년 단위로 반올림합니다(최소 1년). 시작일은 반올림한 시작 나이를 환산한 근삿값입니다. 대운 간지와 시기만 표시하며 길흉이나 실제 사건을 예측하지 않습니다.');
+  lines.push(...window.ProfileReading.toMarkdown(window.ProfileReading.build(data)),'');
   lines.push('','## 계산 기준','',`- 출생시간 보정: ${data.correction}분`, `- 일주 경계: ${data.boundary==='23'?'밤 11시':'자정'}`,`- 십이운성: 화토동궁, 양간 순행·음간 역행`,`- 시간 미상 여부: ${data.pillars[3]?'아니요':'예'}`,'','이 결과는 전통 명리의 상징적 분류를 설명합니다. 실제 성격이나 미래를 입증하는 결과가 아니며, 강약·격국·용신에 따른 종합 해석은 포함하지 않습니다.','');
   lines.push('','버전 v'+data.version);
   return lines.join('\n');
@@ -218,25 +221,41 @@ function renderResult(data,values,{persist=true}={}){
   }
 }
 
-try{
-  const saved=JSON.parse(localStorage.getItem(lastResultKey)||'null');
-  if(saved?.data?.pillars&&saved?.values){
+// 복원과 새 검색이 서로 덮어쓰지 않도록, 계산 요청마다 번호를 매기고 가장 최근 요청의 결과만 화면과 저장값에 쓴다.
+let latestRequest=0;
+// 저장된 마지막 결과는 이전 버전이 만든 값(예: 임시 일간 기준 십성)을 담을 수 있으므로, 현재 엔진으로 다시 계산해 보여 준다.
+async function restoreLastResult(){
+  let saved=null;
+  try{saved=JSON.parse(localStorage.getItem(lastResultKey)||'null');}catch{}
+  if(!saved?.values||typeof saved.values!=='object')return;
+  const request=++latestRequest;
+  try{
     const profile=readProfiles().find(p=>JSON.stringify(p.values)===JSON.stringify(saved.values));
     loadForm(saved.values,profile?.name||profileName.value);
-    renderResult(saved.data,saved.values,{persist:false});
-  }
-}catch{}
+  }catch{}
+  try{
+    const response=await fetch('/api/calculate',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(saved.values)});
+    const data=await response.json();
+    if(!response.ok)throw new Error(data.error);
+    if(request!==latestRequest)return;
+    renderResult(data,saved.values,{persist:false});
+    try{localStorage.setItem(lastResultKey,JSON.stringify({data,values:saved.values}));}catch{}
+  }catch{}
+}
+restoreLastResult();
 
 form.addEventListener('submit',async event=>{
   event.preventDefault();
   error.textContent='';
   const values=captureForm();
+  const request=++latestRequest;
   try{
     const response=await fetch('/api/calculate',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(values)});
     const data=await response.json();
     if(!response.ok)throw new Error(data.error);
+    if(request!==latestRequest)return;
     renderResult(data,values);
-  }catch(err){error.textContent=err.message;}
+  }catch(err){ if(request===latestRequest) error.textContent=err.message; }
 });
 
 savedProfiles.addEventListener('click',event=>{
