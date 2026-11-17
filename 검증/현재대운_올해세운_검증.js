@@ -94,4 +94,29 @@ const sameInput = make(1962, 3, 12, '12:00', 'male');
 assert.ok(sameInput.analysis && sameInput.analysis.strength, '기존 분석 결과는 그대로 있어야 한다');
 
 console.log('같은 방향·엇갈림 사례의 규칙 대조, 미정 사례 이유 표시, HTML·Markdown 문장 일치 확인');
+// 5) 혼합 판정(008): 천간과 지지가 각각 도움·부담이면 방향을 정하지 않고 두 판정을 순서대로 알려 준다.
+// 재현 명식 辛酉 庚子 戊子 癸亥, 현재 대운 丙申(천간 용신, 지지 기신)
+{
+  const mixed = calculate({ year: 1982, month: 1, day: 5, calendar: 'solar', time: '22:30', sex: 'male', dayBoundary: '23', correction: 0 });
+  assert.strictEqual(mixed.pillars.map(p => p.hanja).join(' '), '辛酉 庚子 戊子 癸亥');
+  const b = Fun.bridge(mixed);
+  assert.strictEqual(b.lines[0], '현재 대운은 丙申입니다. 천간은 용신, 지지는 기신이라 도움과 부담이 함께 나타나는 흐름으로 풀이합니다.');
+  assert.strictEqual(b.reason, null, '혼합 판정은 갈림·보류 이유로 표시하지 않는다');
+  assert.ok(b.lines[1] && b.lines[1].includes('2026년 丙午 세운'), '올해 세운 문장은 유지');
+  const md = Fun.bridgeMarkdown(mixed).join('\n');
+  for (const line of b.lines) assert.ok(md.includes(line), 'Markdown 누락: ' + line);
+  const html = Fun.build(mixed, '');
+  for (const line of b.lines) assert.ok(html.includes(line), 'HTML 누락: ' + line);
+}
+// 반대 순서: 천간 기신, 지지 희신 (실제 순서대로 표시)
+{
+  const r = calculate({ year: 1982, month: 1, day: 5, calendar: 'solar', time: '22:30', sex: 'male', dayBoundary: '23', correction: 0 });
+  const fake = JSON.parse(JSON.stringify(r));
+  fake.analysis.cycles = [{ pillar: '癸巳', stem: '기신', branch: '희신', fromAge: 0, toAge: 99 }];
+  fake.daeun = { ...fake.daeun, available: true };
+  const b = Fun.bridge(fake);
+  assert.strictEqual(b.lines[0], '현재 대운은 癸巳입니다. 천간은 기신, 지지는 희신이라 도움과 부담이 함께 나타나는 흐름으로 풀이합니다.');
+  assert.strictEqual(b.reason, null);
+}
+console.log('혼합 판정 사례: 재현 명식(천간 용신·지지 기신)과 반대 순서(천간 기신·지지 희신), 화면과 Markdown 일치');
 console.log('현재 대운과 올해 세운 검증 통과');

@@ -104,6 +104,11 @@ const MISSING={
     if(good&&bad) return null;
     return good?'도움':bad?'부담':'중립';
   }
+  // 천간과 지지가 각각 도움(용신·희신)과 부담(기신)이면 방향을 하나로 정하지 않고, 두 판정을 순서대로 알려 준다.
+  function mixedPair(stem,branch){
+    const good=j=>j==='용신'||j==='희신', bad=j=>j==='기신';
+    return (good(stem)&&bad(branch))||(bad(stem)&&good(branch));
+  }
   function bridge(data){
     const a=data.analysis, out={lines:[],basis:null,reason:null};
     if(!a||!data.pillars[2]){ out.reason='일간이 확정되지 않아 판정 결과가 없습니다.'; return out; }
@@ -117,6 +122,11 @@ const MISSING={
     else{
       cur=(a.cycles||[]).find(c=>nowAge>=c.fromAge&&nowAge<=c.toAge)||null;
       if(!cur) curReason='현재 나이에 해당하는 대운 구간이 없습니다.';
+    }
+    if(cur&&mixedPair(cur.stem,cur.branch)){
+      out.lines=[`현재 대운은 ${cur.pillar}입니다. 천간은 ${cur.stem}, 지지는 ${cur.branch}이라 도움과 부담이 함께 나타나는 흐름으로 풀이합니다.`];
+      if(yNow&&yTone) out.lines.push(`${nowYear}년 ${yNow.pillar} 세운은 ${TONE_ADD[yTone]}을 더합니다.`);
+      return out;
     }
     const cTone=cur?toneOfPair(cur.stem,cur.branch):null;
     if(cur&&!cTone){ cur=null; curReason='현재 대운의 천간·지지 판정이 갈림이거나 보류라 방향을 정할 수 없습니다.'; }
