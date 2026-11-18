@@ -16,7 +16,9 @@ function parts(ms) { const p = Object.fromEntries(formatter.formatToParts(new Da
 function formatKst(ms) { const [y,m,d,h,min]=parts(ms); return `${y}-${String(m).padStart(2,'0')}-${String(d).padStart(2,'0')} ${String(h).padStart(2,'0')}:${String(min).padStart(2,'0')}`; }
 function instant(y,m,d,h,min) {
   const wall = Date.UTC(y,m-1,d,h,min);
-  const candidates = [540,600].map(offset => wall-offset*60000).filter(t => parts(t).join(',') === [y,m,d,h,min].join(','));
+  // 역사적으로 한국 표준시는 UTC+08:30, +09:00 및 서머타임 시각을 사용했다.
+  // 서울의 IANA 시간대 자료를 기준으로 가능한 오프셋을 역탐색해 DST 공백/중복도 판별한다.
+  const candidates = Array.from({length:241},(_,i)=>420+i).map(offset => wall-offset*60000).filter(t => parts(t).join(',') === [y,m,d,h,min].join(','));
   if (candidates.length !== 1) throw new Error(candidates.length ? '서머타임 종료로 출생 시각이 두 번 존재합니다. 현재 버전에서는 해당 시각을 계산할 수 없습니다.' : '서머타임 전환으로 존재하지 않는 출생 시각입니다. 입력을 확인해 주세요.');
   return candidates[0];
 }
@@ -33,14 +35,14 @@ function toKo(gz){ return koreanStem[stems.indexOf(gz[0])]+koreanBranch[branches
 function gongmangOf(dayGz){ const n=Array.from({length:60},(_,i)=>i).find(i=>stems[i%10]===dayGz[0]&&branches[i%12]===dayGz[1]); const start=n-(n%10); return [(start+10)%12,(start+11)%12].map(i=>koreanBranch[i]).join(''); }
 function calculateCore(input) {
   let y=Number(input.year),m=Number(input.month),d=Number(input.day);
-  if(!Number.isInteger(y)||!Number.isInteger(m)||!Number.isInteger(d)||y<1962||y>2050) throw new Error('지원하는 입력 연도는 1962~2050년입니다.');
+  if(!Number.isInteger(y)||!Number.isInteger(m)||!Number.isInteger(d)||y<1890||y>2050) throw new Error('지원하는 입력 연도는 1890~2050년입니다.');
   if(input.calendar==='lunar') {
     if(!LunarCalendar.isValid(y,m,d,Boolean(input.leap))) throw new Error('존재하지 않는 음력 날짜 또는 윤달입니다.');
     const s=toSolar(y,m,d,Boolean(input.leap)); y=s.year;m=s.month;d=s.day;
   } else if(input.calendar!=='solar') throw new Error('달력 종류를 확인해 주세요.');
   const dt=new Date(Date.UTC(y,m-1,d));
   if(dt.getUTCFullYear()!==y||dt.getUTCMonth()+1!==m||dt.getUTCDate()!==d) throw new Error('존재하지 않는 양력 날짜입니다.');
-  if(y<1962||y>2050) throw new Error('변환된 양력 날짜가 지원 범위를 벗어났습니다.');
+  if(y<1890||y>2050) throw new Error('변환된 양력 날짜가 지원 범위를 벗어났습니다.');
   const lunar=toLunar(y,m,d);
   const unknown=Boolean(input.unknown), hm=unknown?[12,0]:String(input.time||'').split(':').map(Number);
   if(hm.length!==2||!Number.isInteger(hm[0])||!Number.isInteger(hm[1])||hm[0]<0||hm[0]>23||hm[1]<0||hm[1]>59) throw new Error('출생시간을 입력해 주세요.');

@@ -11,3 +11,4 @@ body{margin:0}main{max-width:1180px;margin:auto;padding:64px 28px}header{text-al
 .daeun-table th,.daeun-table td{border-bottom:1px solid var(--line,#ddd);padding:6px 8px;text-align:left;vertical-align:top}
 
 .app-version{font-size:0.5em;font-weight:500;opacity:0.6;margin-left:0.4em;vertical-align:middle}
+.result-actions{display:flex;gap:8px;flex-wrap:wrap}
