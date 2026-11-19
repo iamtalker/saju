@@ -138,11 +138,21 @@ function calculateCore(input) {
   const addTen=n=>{ if(n) sipCounts[n]=(sipCounts[n]||0)+1; };
   if(!uncertainDay) pillars.forEach((p,i)=>{ if(!p) return; if(i!==2) addTen(describe(p,dayStemOpt).stemTen); const h=describe(p,dayStemOpt).hidden; addTen(h[h.length-1].ten); });
   const sipsinCount=uncertainDay?null:Object.entries(sipCounts).map(([name,count])=>({name,count})).sort((a,b)=>b.count-a.count);
-  const prevYearGz=toKo(Solar.fromYmdHms(nowKst[0]-1,6,1,12,0,0).getLunar().getYearInGanZhi());
-  const monthlyFlow=Array.from({length:12},(_,i)=>{ const m=i+1; const gz=Solar.fromYmdHms(nowKst[0],m,15,12,0,0).getLunar().getMonthInGanZhiExact(); return {month:m,pillar:toKo(gz),note:m===1?`입춘 전이라 전년(${prevYearGz}년)에 속함`:''}; });
+  // 십성은 일간이 확정된 경우에만 채운다(describe와 같은 규칙). 일간 미확정이면 null.
+  const tenOfGz=gz=>{ const d=describe(gz,dayStemOpt); return {stemTen:d.stemTen, branchTen:d.hidden[d.hidden.length-1].ten}; };
+  // 매월 15일 정오 기준 월 간지. 현재 해와 다음 해에 같은 함수를 쓴다.
+  const monthlyFlowOf=year=>{ const prevGz=toKo(Solar.fromYmdHms(year-1,6,1,12,0,0).getLunar().getYearInGanZhi()); return Array.from({length:12},(_,i)=>{ const m=i+1; const gz=Solar.fromYmdHms(year,m,15,12,0,0).getLunar().getMonthInGanZhiExact(); return {month:m,pillar:toKo(gz),...tenOfGz(gz),note:m===1?`입춘 전이라 전년(${prevGz}년)에 속함`:''}; }); };
+  const monthlyFlow=monthlyFlowOf(nowKst[0]);
+  // 다음 해의 연간·월간 계산 항목(해석 없음). 세운 판정은 analysis.years, 월운 판정은 analysis.nextMonths를 쓴다.
+  const nextYearGz=Solar.fromYmdHms(nowKst[0]+1,3,1,12,0,0).getLunar().getYearInGanZhi();
+  const nextYear={year:nowKst[0]+1, pillar:toKo(nextYearGz), ...tenOfGz(nextYearGz), monthlyFlow:monthlyFlowOf(nowKst[0]+1)};
   const todayGz=Solar.fromYmdHms(nowKst[0],nowKst[1],nowKst[2],12,0,0).getLunar().getDayInGanZhi();
+  // 오늘 일진과 일지·일간의 관계(합·충 등). 일주 미확정이면 null.
+  const todayDayRel=uncertainDay?null:{stemHap:stemHapPairs[todayGz[0]]===day[0], branchKinds:[...SajuAnalysis.pairKind(todayGz[1],day[1]),...(todayGz[1]===day[1]&&selfXing.includes(todayGz[1])?['자형']:[])]};
+  // 오늘 일진의 지지가 확정된 원국 각 지지와 맺는 관계(자리별). 미확정 기둥은 건너뛴다.
+  const todayNatal=uncertainDay?null:pillars.map((p,i)=>p?{pos:posBranch[i], branchKinds:[...SajuAnalysis.pairKind(todayGz[1],p[1]),...(todayGz[1]===p[1]&&selfXing.includes(p[1])?['자형']:[])]}:null).filter(x=>x&&x.branchKinds.length);
   // 띠는 연주 기준이다. 연주가 미확정이면 일지로 대신하지 않는다.
-  const extras={animal:yearP?animals[branches.indexOf(yearP[1])]||null:null, gongmang:uncertainDay?null:gongmangOf(day), sipsinCount, monthlyFlow, year:nowKst[0], today:{date:`${nowKst[0]}-${String(nowKst[1]).padStart(2,'0')}-${String(nowKst[2]).padStart(2,'0')}`, pillar:toKo(todayGz)}};
+  const extras={animal:yearP?animals[branches.indexOf(yearP[1])]||null:null, gongmang:uncertainDay?null:gongmangOf(day), sipsinCount, monthlyFlow, nextYear, year:nowKst[0], today:{date:`${nowKst[0]}-${String(nowKst[1]).padStart(2,'0')}-${String(nowKst[2]).padStart(2,'0')}`, pillar:toKo(todayGz), stem:todayGz[0], branch:todayGz[1], ...tenOfGz(todayGz), dayRel:todayDayRel, natalRel:todayNatal}};
   let trueSolar=null;
   if(input.longitude!==undefined&&input.longitude!==''&&!unknown){
     const lon=Number(input.longitude);

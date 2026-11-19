@@ -14,7 +14,7 @@
   <header>
     <span class="eyebrow">사주를 처음 만나는 시간</span>
     <h1>나의 사주 살펴보기 <small class="app-version">v__APP_VERSION__</small></h1>
-    <p>태어난 순간을 네 기둥으로 풀어보세요.<br>낯선 글자부터 차근차근 설명해 드립니다.</p>
+    <p>태어난 순간의 네 기둥을 함께 살펴보세요.<br>처음 보는 글자도 차근차근 풀어 드립니다.</p>
   </header>
   <div class="layout">
     <section class="panel">
@@ -82,18 +82,22 @@
       <div class="empty">
         <div class="seal">命</div>
         <h2>나만의 네 기둥</h2>
-        <p>출생 정보를 입력하면<br>여기에 사주가 나타납니다.</p>
+        <p>출생 정보를 입력하면<br>여기에 네 기둥과 풀이가 펼쳐집니다.</p>
         <div class="divider"></div>
-        <small>사주는 네 개의 기둥에 담긴<br>여덟 글자를 살펴보는 전통 체계입니다.</small>
+        <small>사주는 태어난 순간의 여덟 글자를<br>살펴보는 전통 상징 체계입니다.</small>
       </div>
     </section>
     <section id="savedProfiles" class="panel saved-profiles" aria-live="polite" aria-label="저장한 사주"></section>
+    <section id="compat" class="panel compat" aria-live="polite" aria-label="궁합 보기"></section>
   </div>
-  <footer>이 프로그램은 전통 명리 체계를 이해하기 위한 참고 도구입니다. 사주의 예측력이 과학적으로 입증된 것은 아닙니다.<br>한국 음력: kor-lunar · 절기 계산: lunar-javascript · 출생시간 보정은 직접 설정</footer>
+  <footer>사주는 근거 없는 점술이며, 풀이는 재미로만 봐 주세요.<br>한국 음력: kor-lunar · 절기 계산: lunar-javascript · 출생시간 보정은 직접 설정</footer>
 </main>
 <script src="/reading.js"></script>
 <script src="/profile.js"></script>
+<script src="/deep-reading.js"></script>
+<script src="/compat-reading.js"></script>
 <script src="/fun-reading.js"></script>
+<script src="/extra-reading.js"></script>
 <script src="/app.js"></script>
 </body>
 </html>
