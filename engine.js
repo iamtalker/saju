@@ -16,7 +16,9 @@ function parts(ms) { const p = Object.fromEntries(formatter.formatToParts(new Da
 function formatKst(ms) { const [y,m,d,h,min]=parts(ms); return `${y}-${String(m).padStart(2,'0')}-${String(d).padStart(2,'0')} ${String(h).padStart(2,'0')}:${String(min).padStart(2,'0')}`; }
 function instant(y,m,d,h,min) {
   const wall = Date.UTC(y,m-1,d,h,min);
-  const candidates = [540,600].map(offset => wall-offset*60000).filter(t => parts(t).join(',') === [y,m,d,h,min].join(','));
+  // 역사적으로 한국 표준시는 UTC+08:30, +09:00 및 서머타임 시각을 사용했다.
+  // 서울의 IANA 시간대 자료를 기준으로 가능한 오프셋을 역탐색해 DST 공백/중복도 판별한다.
+  const candidates = Array.from({length:241},(_,i)=>420+i).map(offset => wall-offset*60000).filter(t => parts(t).join(',') === [y,m,d,h,min].join(','));
   if (candidates.length !== 1) throw new Error(candidates.length ? '서머타임 종료로 출생 시각이 두 번 존재합니다. 현재 버전에서는 해당 시각을 계산할 수 없습니다.' : '서머타임 전환으로 존재하지 않는 출생 시각입니다. 입력을 확인해 주세요.');
   return candidates[0];
 }
@@ -33,14 +35,14 @@ function toKo(gz){ return koreanStem[stems.indexOf(gz[0])]+koreanBranch[branches
 function gongmangOf(dayGz){ const n=Array.from({length:60},(_,i)=>i).find(i=>stems[i%10]===dayGz[0]&&branches[i%12]===dayGz[1]); const start=n-(n%10); return [(start+10)%12,(start+11)%12].map(i=>koreanBranch[i]).join(''); }
 function calculateCore(input) {
   let y=Number(input.year),m=Number(input.month),d=Number(input.day);
-  if(!Number.isInteger(y)||!Number.isInteger(m)||!Number.isInteger(d)||y<1962||y>2050) throw new Error('지원하는 입력 연도는 1962~2050년입니다.');
+  if(!Number.isInteger(y)||!Number.isInteger(m)||!Number.isInteger(d)||y<1890||y>2050) throw new Error('지원하는 입력 연도는 1890~2050년입니다.');
   if(input.calendar==='lunar') {
     if(!LunarCalendar.isValid(y,m,d,Boolean(input.leap))) throw new Error('존재하지 않는 음력 날짜 또는 윤달입니다.');
     const s=toSolar(y,m,d,Boolean(input.leap)); y=s.year;m=s.month;d=s.day;
   } else if(input.calendar!=='solar') throw new Error('달력 종류를 확인해 주세요.');
   const dt=new Date(Date.UTC(y,m-1,d));
   if(dt.getUTCFullYear()!==y||dt.getUTCMonth()+1!==m||dt.getUTCDate()!==d) throw new Error('존재하지 않는 양력 날짜입니다.');
-  if(y<1962||y>2050) throw new Error('변환된 양력 날짜가 지원 범위를 벗어났습니다.');
+  if(y<1890||y>2050) throw new Error('변환된 양력 날짜가 지원 범위를 벗어났습니다.');
   const lunar=toLunar(y,m,d);
   const unknown=Boolean(input.unknown), hm=unknown?[12,0]:String(input.time||'').split(':').map(Number);
   if(hm.length!==2||!Number.isInteger(hm[0])||!Number.isInteger(hm[1])||hm[0]<0||hm[0]>23||hm[1]<0||hm[1]>59) throw new Error('출생시간을 입력해 주세요.');
@@ -136,11 +138,21 @@ function calculateCore(input) {
   const addTen=n=>{ if(n) sipCounts[n]=(sipCounts[n]||0)+1; };
   if(!uncertainDay) pillars.forEach((p,i)=>{ if(!p) return; if(i!==2) addTen(describe(p,dayStemOpt).stemTen); const h=describe(p,dayStemOpt).hidden; addTen(h[h.length-1].ten); });
   const sipsinCount=uncertainDay?null:Object.entries(sipCounts).map(([name,count])=>({name,count})).sort((a,b)=>b.count-a.count);
-  const prevYearGz=toKo(Solar.fromYmdHms(nowKst[0]-1,6,1,12,0,0).getLunar().getYearInGanZhi());
-  const monthlyFlow=Array.from({length:12},(_,i)=>{ const m=i+1; const gz=Solar.fromYmdHms(nowKst[0],m,15,12,0,0).getLunar().getMonthInGanZhiExact(); return {month:m,pillar:toKo(gz),note:m===1?`입춘 전이라 전년(${prevYearGz}년)에 속함`:''}; });
+  // 십성은 일간이 확정된 경우에만 채운다(describe와 같은 규칙). 일간 미확정이면 null.
+  const tenOfGz=gz=>{ const d=describe(gz,dayStemOpt); return {stemTen:d.stemTen, branchTen:d.hidden[d.hidden.length-1].ten}; };
+  // 매월 15일 정오 기준 월 간지. 현재 해와 다음 해에 같은 함수를 쓴다.
+  const monthlyFlowOf=year=>{ const prevGz=toKo(Solar.fromYmdHms(year-1,6,1,12,0,0).getLunar().getYearInGanZhi()); return Array.from({length:12},(_,i)=>{ const m=i+1; const gz=Solar.fromYmdHms(year,m,15,12,0,0).getLunar().getMonthInGanZhiExact(); return {month:m,pillar:toKo(gz),...tenOfGz(gz),note:m===1?`입춘 전이라 전년(${prevGz}년)에 속함`:''}; }); };
+  const monthlyFlow=monthlyFlowOf(nowKst[0]);
+  // 다음 해의 연간·월간 계산 항목(해석 없음). 세운 판정은 analysis.years, 월운 판정은 analysis.nextMonths를 쓴다.
+  const nextYearGz=Solar.fromYmdHms(nowKst[0]+1,3,1,12,0,0).getLunar().getYearInGanZhi();
+  const nextYear={year:nowKst[0]+1, pillar:toKo(nextYearGz), ...tenOfGz(nextYearGz), monthlyFlow:monthlyFlowOf(nowKst[0]+1)};
   const todayGz=Solar.fromYmdHms(nowKst[0],nowKst[1],nowKst[2],12,0,0).getLunar().getDayInGanZhi();
+  // 오늘 일진과 일지·일간의 관계(합·충 등). 일주 미확정이면 null.
+  const todayDayRel=uncertainDay?null:{stemHap:stemHapPairs[todayGz[0]]===day[0], branchKinds:[...SajuAnalysis.pairKind(todayGz[1],day[1]),...(todayGz[1]===day[1]&&selfXing.includes(todayGz[1])?['자형']:[])]};
+  // 오늘 일진의 지지가 확정된 원국 각 지지와 맺는 관계(자리별). 미확정 기둥은 건너뛴다.
+  const todayNatal=uncertainDay?null:pillars.map((p,i)=>p?{pos:posBranch[i], branchKinds:[...SajuAnalysis.pairKind(todayGz[1],p[1]),...(todayGz[1]===p[1]&&selfXing.includes(p[1])?['자형']:[])]}:null).filter(x=>x&&x.branchKinds.length);
   // 띠는 연주 기준이다. 연주가 미확정이면 일지로 대신하지 않는다.
-  const extras={animal:yearP?animals[branches.indexOf(yearP[1])]||null:null, gongmang:uncertainDay?null:gongmangOf(day), sipsinCount, monthlyFlow, year:nowKst[0], today:{date:`${nowKst[0]}-${String(nowKst[1]).padStart(2,'0')}-${String(nowKst[2]).padStart(2,'0')}`, pillar:toKo(todayGz)}};
+  const extras={animal:yearP?animals[branches.indexOf(yearP[1])]||null:null, gongmang:uncertainDay?null:gongmangOf(day), sipsinCount, monthlyFlow, nextYear, year:nowKst[0], today:{date:`${nowKst[0]}-${String(nowKst[1]).padStart(2,'0')}-${String(nowKst[2]).padStart(2,'0')}`, pillar:toKo(todayGz), stem:todayGz[0], branch:todayGz[1], ...tenOfGz(todayGz), dayRel:todayDayRel, natalRel:todayNatal}};
   let trueSolar=null;
   if(input.longitude!==undefined&&input.longitude!==''&&!unknown){
     const lon=Number(input.longitude);

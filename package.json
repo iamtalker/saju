@@ -9,5 +9,5 @@
   "scripts": {
     "verify:manseryeok": "node 검증/manseryeok_대조.js"
   },
-  "version": "0.6.8"
+  "version": "0.7.0"
 }
