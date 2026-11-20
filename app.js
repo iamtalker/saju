@@ -3,7 +3,6 @@ const result=document.querySelector('#result');
 const error=document.querySelector('#error');
 const unknown=document.querySelector('#unknown');
 const time=document.querySelector('#time');
-const profileName=document.querySelector('#profileName');
 const savedProfiles=document.querySelector('#savedProfiles');
 function josaOf(word,batchim,plain){ const c=String(word).slice(-1).charCodeAt(0); const has=c>=0xAC00&&c<=0xD7A3&&(c-0xAC00)%28!==0; return has?batchim:plain; }
 function withJosa(word,batchim,plain){ return word+josaOf(word,batchim,plain); }
@@ -11,7 +10,19 @@ function koBranch(h){ const m={子:'자',丑:'축',寅:'인',卯:'묘',辰:'진'
 const storageKey='saju.birth-form.v1';
 const profilesKey='saju.saved-profiles.v1';
 const lastResultKey='saju.last-result.v1';
-const fieldIds=['year','month','day','time','sex','correction','longitude','boundary','profileName'];
+const serverRunKey='saju.server-run.v1';
+const serverRunId=document.querySelector('meta[name="server-run-id"]')?.content||'';
+const tabPresence=new EventSource('/api/presence');
+if(serverRunId){
+  try{
+    if(localStorage.getItem(serverRunKey)!==serverRunId){
+      localStorage.removeItem(storageKey);
+      localStorage.removeItem(lastResultKey);
+      localStorage.setItem(serverRunKey,serverRunId);
+    }
+  }catch{}
+}
+const fieldIds=['year','month','day','time','sex','correction','longitude','boundary'];
 const pillarNames=['연주','월주','일주','시주'];
 const pillarMeanings=['태어난 해','태어난 달','태어난 날','태어난 시간'];
 
@@ -77,23 +88,21 @@ function renderProfiles(){
   if(window.refreshCompatOptions)window.refreshCompatOptions();
   const profiles=readProfiles();
   const rows=profiles.map(p=>`<li class="saved-profile"><div class="saved-profile-info"><strong>${escapeHtml(p.name)}</strong><small>${escapeHtml(p.values.calendar==='lunar'?'음력':'양력')} ${escapeHtml(p.values.year)}-${escapeHtml(p.values.month)}-${escapeHtml(p.values.day)}${p.values.unknown?' · 시간 미상':` · ${escapeHtml(p.values.time||'시간 미상')}`}</small></div><div class="saved-profile-actions"><button type="button" data-action="load" data-id="${escapeHtml(p.id)}">불러오기</button><button type="button" data-action="rename" data-id="${escapeHtml(p.id)}">이름 변경</button><button type="button" class="delete-profile" data-action="delete" data-id="${escapeHtml(p.id)}">삭제</button></div></li>`).join('');
-  savedProfiles.innerHTML=`<div class="section-label">04 · 저장한 사주</div><h2>내 사주 목록 <small>${profiles.length}</small></h2><p class="saved-intro">저장 목록은 이 브라우저에만 보관됩니다.</p>${rows?`<ul class="saved-profile-list">${rows}</ul>`:'<p class="saved-empty">아직 저장한 사주가 없어요. 풀이 결과의 ‘지금 사주 저장’을 누르면 여기에 모입니다.</p>'}`;
+  savedProfiles.innerHTML=`<div class="section-label">01 · 저장한 사주</div><h2>내 사주 목록 <small>${profiles.length}</small></h2><p class="saved-intro">생년월일과 이름을 입력해 저장하면 언제든 불러와 사주를 다시 볼 수 있습니다. 목록은 이 브라우저에만 보관됩니다.</p><form id="saveProfileForm" class="profile-save-form"><label>이름<input name="name" type="text" maxlength="60" placeholder="예: 나, 어머니" required></label><div class="profile-save-date"><label>년<input name="year" type="number" min="1890" max="2050" required></label><label>월<input name="month" type="number" min="1" max="12" required></label><label>일<input name="day" type="number" min="1" max="31" required></label></div><div class="profile-save-options"><label><input type="radio" name="calendar" value="solar" checked> 양력</label><label><input type="radio" name="calendar" value="lunar"> 음력</label><label><input type="checkbox" name="leap"> 윤달</label><label>출생 시간<input name="time" type="time" value="12:00"></label><label><input type="checkbox" name="unknown"> 시간 미상</label></div><button type="submit" class="secondary-button">이 사주 저장</button><div id="savedProfileError" class="error" role="alert"></div></form>${rows?`<ul class="saved-profile-list">${rows}</ul>`:'<p class="saved-empty">저장한 사주가 여기에 표시됩니다.</p>'}`;
 }
-function saveProfile(values){
+function saveProfile(values,name){
   const profiles=readProfiles();
-  const currentName=profileName.value.trim();
   const existing=profiles.find(p=>JSON.stringify(p.values)===JSON.stringify(values));
-  const fallback=`${values.year}-${String(values.month).padStart(2,'0')}-${String(values.day).padStart(2,'0')}`;
   if(existing){
-    if(currentName)existing.name=currentName;
+    existing.name=name;
     existing.values=values;
   }else{
-    profiles.unshift({id:globalThis.crypto?.randomUUID?.()||`${Date.now()}-${Math.random().toString(36).slice(2)}`,name:currentName||fallback,values});
+    profiles.unshift({id:globalThis.crypto?.randomUUID?.()||`${Date.now()}-${Math.random().toString(36).slice(2)}`,name,values});
   }
   writeProfiles(profiles);
   renderProfiles();
 }
-function loadForm(values,name){
+function loadForm(values){
   for(const id of ['year','month','day','time','sex','correction','longitude','boundary']){
     // 계산 값의 날짜 기준 키는 dayBoundary이고 화면 필드 id는 boundary다.
     setFieldValue(id,id==='boundary'?(values.dayBoundary??values.boundary??''):(values[id]??''));
@@ -101,7 +110,6 @@ function loadForm(values,name){
   document.querySelector(`[name=calendar][value=${values.calendar==='lunar'?'lunar':'solar'}]`).checked=true;
   document.querySelector('#leap').checked=values.leap===true;
   unknown.checked=values.unknown===true;
-  profileName.value=name||'';
   syncForm();
   saveForm();
 }
@@ -165,7 +173,7 @@ const funStems={'甲':'한번 정한 방향은 끝까지 밀고 가는 편이라
   const funText=data.pillars[2]?funStems[data.pillars[2].stem]:null;
   const funCard=funText?`<article id="reading-fun" class="reading-card"><span>일간 한 줄</span><h3>일간 ${escapeHtml(data.pillars[2].hangul)}의 한 줄</h3><p>${escapeHtml(funText)}</p></article>`:'';
   const extra=reading.extra||{};
-  return `<section class="reading"><div class="section-label">03 · 사주 풀이</div><h2>나의 사주 읽어보기</h2><p class="reading-intro">전통 명리의 상징으로 원국의 글자를 차례대로 풀어 봅니다. ${reading.partial?'확정되지 않은 기둥은 빼고 살펴본 부분 풀이입니다.':'태어난 시각까지 포함한 여덟 글자를 차례대로 살펴봅니다.'}</p>${window.ExtraReading?window.ExtraReading.summaryBlock(extra):''}${window.FunReading?window.FunReading.build(data,window.ProfileReading.toHtml(window.ProfileReading.build(data))):''}${window.DeepReading?window.DeepReading.toHtml(window.DeepReading.build(data)):''}<article id="reading-pillars" class="reading-card"><span>네 기둥의 자리와 십이운성</span>${pillarGuide}<p class="reading-note">십이운성은 화토동궁, 양간 순행·음간 역행 기준입니다. 戊의 장생은 寅으로 봅니다. 전통적 분류입니다.</p></article>${dayHtml}${strengthCard}${elementCard}${seasonCard}${tenCard}${hiddenCard}${relationCard}${shinsalCard}${extrasCard}${reading.day?conventionCard:''}${funCard}${window.ExtraReading?window.ExtraReading.bodyBlock(extra):''}<article id="reading-criteria" class="reading-card"><span>계산 기준</span><h3>판정에 쓴 기준</h3>${Object.entries((data.analysis&&data.analysis.criteria)||{}).map(([k,v])=>`<div class="theme"><b>${escapeHtml({strength:'신강·신약 판정',johu:'조후',yong:'용신·희신·기신',gi:'기신·한신',month:'월운',relations:'관계 식별',shinsal:'신살과 공망',gyeok:'격국',hap:'합과 합화',branchRule:'지지의 방합·삼합과 丑·辰'}[k]||k)}</b><p>${escapeHtml(v)}</p></div>`).join("")}<p class="reading-note">사주는 근거 없는 점술이며, 이 풀이는 재미로만 봐 주세요.</p><p class="reading-note">버전 v${data.version}</p></article></section>`;
+  return `<section class="reading"><div class="section-label">04 · 사주 풀이</div><h2>나의 사주 읽어보기</h2><p class="reading-intro">전통 명리의 상징으로 원국의 글자를 차례대로 풀어 봅니다. ${reading.partial?'확정되지 않은 기둥은 빼고 살펴본 부분 풀이입니다.':'태어난 시각까지 포함한 여덟 글자를 차례대로 살펴봅니다.'}</p>${window.ExtraReading?window.ExtraReading.summaryBlock(extra):''}${window.FunReading?window.FunReading.build(data,window.ProfileReading.toHtml(window.ProfileReading.build(data))):''}${window.DeepReading?window.DeepReading.toHtml(window.DeepReading.build(data)):''}<article id="reading-pillars" class="reading-card"><span>네 기둥의 자리와 십이운성</span>${pillarGuide}<p class="reading-note">십이운성은 화토동궁, 양간 순행·음간 역행 기준입니다. 戊의 장생은 寅으로 봅니다. 전통적 분류입니다.</p></article>${dayHtml}${strengthCard}${elementCard}${seasonCard}${tenCard}${hiddenCard}${relationCard}${shinsalCard}${extrasCard}${reading.day?conventionCard:''}${funCard}${window.ExtraReading?window.ExtraReading.bodyBlock(extra):''}<article id="reading-criteria" class="reading-card"><span>계산 기준</span><h3>판정에 쓴 기준</h3>${Object.entries((data.analysis&&data.analysis.criteria)||{}).map(([k,v])=>`<div class="theme"><b>${escapeHtml({strength:'신강·신약 판정',johu:'조후',yong:'용신·희신·기신',gi:'기신·한신',month:'월운',relations:'관계 식별',shinsal:'신살과 공망',gyeok:'격국',hap:'합과 합화',branchRule:'지지의 방합·삼합과 丑·辰'}[k]||k)}</b><p>${escapeHtml(v)}</p></div>`).join("")}<p class="reading-note">전통 명리의 상징을 바탕으로 한 참고 풀이이며, 과학적으로 검증된 예측은 아닙니다.</p><p class="reading-note">버전 v${data.version}</p></article></section>`;
 }
 function renderMarkdown(data,reading){
   const lines=['# 사주 풀이','',`양력: ${data.solar}`,`음력: ${data.lunar}`,'',...window.ExtraReading.summaryMarkdown(reading.extra||{}),...window.FunReading.bridgeMarkdown(data),'','## 네 기둥','', '| 기둥 | 간지 | 십성 |','|---|---|---|'];
@@ -192,7 +200,7 @@ function renderMarkdown(data,reading){
   lines.push('','## 대운 흐름','',...daeunLines,'','순역행은 양년 남성·음년 여성 순행, 음년 남성·양년 여성 역행 기준입니다. 3일=1년으로 환산하고 시작 나이는 년 단위로 반올림합니다(최소 1년). 시작일은 반올림한 시작 나이를 환산한 근삿값입니다. 대운 간지와 시기만 표시하며 길흉이나 실제 사건을 예측하지 않습니다.');
   lines.push(...window.ProfileReading.toMarkdown(window.ProfileReading.build(data)),'');
   lines.push(...window.DeepReading.toMarkdown(window.DeepReading.build(data)),'');
-  lines.push('','## 계산 기준','',`- 출생시간 보정: ${data.correction}분`, `- 일주 경계: ${data.boundary==='23'?'밤 11시':'자정'}`,`- 십이운성: 화토동궁, 양간 순행·음간 역행`,`- 시간 미상 여부: ${data.pillars[3]?'아니요':'예'}`,'','사주는 근거 없는 점술이며, 이 풀이는 재미로만 봐 주세요.','');
+  lines.push('','## 계산 기준','',`- 출생시간 보정: ${data.correction}분`, `- 일주 경계: ${data.boundary==='23'?'밤 11시':'자정'}`,`- 십이운성: 화토동궁, 양간 순행·음간 역행`,`- 시간 미상 여부: ${data.pillars[3]?'아니요':'예'}`,'','전통 명리의 상징을 바탕으로 한 참고 풀이이며, 과학적으로 검증된 예측은 아닙니다.','');
   lines.push('','버전 v'+data.version);
   return lines.join('\n');
 }
@@ -213,7 +221,7 @@ function renderResult(data,values,{persist=true}={}){
   reading.extra=window.ExtraReading.build(data,reading);
   const readingHtml=renderReading(data,reading);
   const markdown=renderMarkdown(data,reading);
-  result.innerHTML=`<p class="notice fun-banner"><b>사주는 근거 없는 점술이에요. 아래 풀이는 모두 재미로만 봐 주세요.</b></p><div class="result-heading"><div><div class="section-label">02 · 나의 사주</div><h2>태어난 순간의 네 기둥</h2></div><div class="result-actions"><button type="button" id="saveCurrentProfile" class="secondary-button">지금 사주 저장</button><button type="button" id="exportMarkdown" class="secondary-button">풀이를 파일로 저장 (Markdown)</button><button type="button" id="printReading" class="secondary-button no-print">인쇄·PDF로 저장</button></div></div><p class="dates">양력 ${escapeHtml(data.solar)} <span>·</span> 음력 ${escapeHtml(data.lunar)}</p>${data.warning.map(w=>`<p class="notice">${escapeHtml(w)}</p>`).join('')}${data.boundaryInfo&&data.boundaryInfo.near&&data.boundaryInfo.near.length?`<p class="notice">현재 적용: 보정 ${data.correction}분, 날짜 전환 ${data.boundary==='00'?'자정':'밤 11시'} → ${data.pillars.map(p=>p?p.hangul:'미상').join(' ')}</p>`:''}${(data.boundaryInfo&&data.boundaryInfo.alternatives||[]).map(a=>`<p class="notice">${escapeHtml(a.label)}: ${a.pillars.join(' ')}</p>`).join('')}${renderReadingToc(reading)}<div class="pillars">${cards}</div>${detail}${readingHtml}${day?`<details><summary>지장간과 십성 더 보기</summary><p>지장간은 지지에 배속하는 천간입니다. 괄호 안의 십성은 일간과의 관계입니다.</p><div class="hidden-list">${hidden}</div></details>`:''}<details><summary>글자 사이의 관계</summary><p>천간합·육합·충과 삼합·방합의 짝 또는 조합 후보를 표시합니다. 부분 조합은 후보이며, 합화나 길흉을 확정하지 않습니다. 미상인 기둥은 검사하지 않습니다.</p><div class="hidden-list">${data.relations.length?data.relations.map(r=>`<div>${r.name} · ${r.positions} (${r.characters})${r.element?` · ${r.element}`:''}${r.complete===false?` · 빠진 글자 ${r.missing.join('·')}`:''}</div>`).join(''):'확인된 관계가 없습니다.'}</div></details><details><summary>계산 기준과 한계</summary><p>절입 시각으로 연주와 월주를 정합니다. 출생 시각은 한국의 당시 표준시를 기준으로 하며, 1987~1988년 서머타임을 반영합니다. 일주와 시주는 입력한 보정 분을 표준시에서 빼 계산합니다. 30분은 근사값이며 출생지나 균시차를 자동 계산하지 않습니다.</p><p>일주는 ${data.boundary==='23'?'보정 시각의 밤 11시':'보정 시각의 자정'}를 기준으로 바뀝니다. ${data.standardTime?`당시 표준시: ${data.standardTime} · 보정된 시각: ${data.adjustedTime}${data.dst?' (서머타임 보정)':''}.`:''}</p><p>대운은 ${data.daeun?.available?'양년남·음년녀 순행 기준이며 3일=1년 환산과 년 단위 반올림을 적용한 근사치입니다.':(data.daeun?.alternatives?'성별을 고르지 않아 남성 기준과 여성 기준을 함께 표시했습니다.':'출생시각 또는 계산 기준 성별이 없어 생략했습니다.')} 용신을 포함한 종합 길흉 해석은 제공하지 않습니다.</p></details>`;
+  result.innerHTML=`<p class="notice fun-banner"><b>전통 명리의 상징을 바탕으로 한 참고 풀이입니다. 가볍게 살펴봐 주세요.</b></p><div class="result-heading"><div><div class="section-label">03 · 나의 사주</div><h2>태어난 순간의 네 기둥</h2></div><div class="result-actions"><button type="button" id="exportMarkdown" class="secondary-button">풀이를 파일로 저장 (Markdown)</button><button type="button" id="printReading" class="secondary-button no-print">인쇄·PDF로 저장</button></div></div><p class="dates">양력 ${escapeHtml(data.solar)} <span>·</span> 음력 ${escapeHtml(data.lunar)}</p>${data.warning.map(w=>`<p class="notice">${escapeHtml(w)}</p>`).join('')}${data.boundaryInfo&&data.boundaryInfo.near&&data.boundaryInfo.near.length?`<p class="notice">현재 적용: 보정 ${data.correction}분, 날짜 전환 ${data.boundary==='00'?'자정':'밤 11시'} → ${data.pillars.map(p=>p?p.hangul:'미상').join(' ')}</p>`:''}${(data.boundaryInfo&&data.boundaryInfo.alternatives||[]).map(a=>`<p class="notice">${escapeHtml(a.label)}: ${a.pillars.join(' ')}</p>`).join('')}${renderReadingToc(reading)}<div class="pillars">${cards}</div>${detail}${readingHtml}${day?`<details><summary>지장간과 십성 더 보기</summary><p>지장간은 지지에 배속하는 천간입니다. 괄호 안의 십성은 일간과의 관계입니다.</p><div class="hidden-list">${hidden}</div></details>`:''}<details><summary>글자 사이의 관계</summary><p>천간합·육합·충과 삼합·방합의 짝 또는 조합 후보를 표시합니다. 부분 조합은 후보이며, 합화나 길흉을 확정하지 않습니다. 미상인 기둥은 검사하지 않습니다.</p><div class="hidden-list">${data.relations.length?data.relations.map(r=>`<div>${r.name} · ${r.positions} (${r.characters})${r.element?` · ${r.element}`:''}${r.complete===false?` · 빠진 글자 ${r.missing.join('·')}`:''}</div>`).join(''):'확인된 관계가 없습니다.'}</div></details><details><summary>계산 기준과 한계</summary><p>절입 시각으로 연주와 월주를 정합니다. 출생 시각은 한국의 당시 표준시를 기준으로 하며, 1987~1988년 서머타임을 반영합니다. 일주와 시주는 입력한 보정 분을 표준시에서 빼 계산합니다. 30분은 근사값이며 출생지나 균시차를 자동 계산하지 않습니다.</p><p>일주는 ${data.boundary==='23'?'보정 시각의 밤 11시':'보정 시각의 자정'}를 기준으로 바뀝니다. ${data.standardTime?`당시 표준시: ${data.standardTime} · 보정된 시각: ${data.adjustedTime}${data.dst?' (서머타임 보정)':''}.`:''}</p><p>대운은 ${data.daeun?.available?'양년남·음년녀 순행 기준이며 3일=1년 환산과 년 단위 반올림을 적용한 근사치입니다.':(data.daeun?.alternatives?'성별을 고르지 않아 남성 기준과 여성 기준을 함께 표시했습니다.':'출생시각 또는 계산 기준 성별이 없어 생략했습니다.')} 용신을 포함한 종합 길흉 해석은 제공하지 않습니다.</p></details>`;
   result.querySelector('#exportMarkdown').addEventListener('click',()=>{
     const blob=new Blob([markdown],{type:'text/markdown;charset=utf-8'});
     const url=URL.createObjectURL(blob);
@@ -224,10 +232,6 @@ function renderResult(data,values,{persist=true}={}){
     URL.revokeObjectURL(url);
   });
   result.querySelector('#printReading').addEventListener('click',()=>window.print());
-  result.querySelector('#saveCurrentProfile').addEventListener('click',()=>{
-    try{saveProfile(values);result.querySelector('#saveCurrentProfile').textContent='저장됨';}
-    catch{error.textContent='브라우저 저장 공간에 기록하지 못했습니다.';}
-  });
   if(persist){
     try{localStorage.setItem(lastResultKey,JSON.stringify({data,values}));}catch{}
     saveForm();
@@ -245,8 +249,7 @@ async function restoreLastResult(){
   if(!['23','00'].includes(saved.values.dayBoundary))saved.values.dayBoundary='23';
   const request=++latestRequest;
   try{
-    const profile=readProfiles().find(p=>JSON.stringify(p.values)===JSON.stringify(saved.values));
-    loadForm(saved.values,profile?.name||profileName.value);
+    loadForm(saved.values);
   }catch{}
   try{
     const response=await fetch('/api/calculate',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(saved.values)});
@@ -273,6 +276,14 @@ form.addEventListener('submit',async event=>{
   }catch(err){ if(request===latestRequest) error.textContent=err.message; }
 });
 
+savedProfiles.addEventListener('submit',event=>{
+  if(event.target.id!=='saveProfileForm')return;
+  event.preventDefault();
+  const formData=new FormData(event.target);
+  const values={year:String(formData.get('year')||''),month:String(formData.get('month')||''),day:String(formData.get('day')||''),calendar:String(formData.get('calendar')||'solar'),leap:formData.get('leap')==='on',time:String(formData.get('time')||'12:00'),sex:'',unknown:formData.get('unknown')==='on',correction:'30',longitude:'',dayBoundary:'23'};
+  try{saveProfile(values,String(formData.get('name')||'').trim());}
+  catch{const savedError=document.querySelector('#savedProfileError');if(savedError)savedError.textContent='브라우저 저장 공간에 기록하지 못했습니다.';}
+});
 savedProfiles.addEventListener('click',event=>{
   const button=event.target.closest('button[data-action]');
   if(!button)return;
@@ -280,7 +291,7 @@ savedProfiles.addEventListener('click',event=>{
   const profile=profiles.find(p=>p.id===button.dataset.id);
   if(!profile)return;
   if(button.dataset.action==='load'){
-    loadForm(profile.values,profile.name);
+    loadForm(profile.values);
     form.requestSubmit();
   }else if(button.dataset.action==='rename'){
     const name=window.prompt('목록에 표시할 이름을 입력하세요.',profile.name);
@@ -334,7 +345,7 @@ let compatMarkdown='';
 
 function compatChoices(){
   const choices=[];
-  if(window.currentResultValues) choices.push({value:'current',label:'현재 풀이 결과',name:profileName.value.trim()||'나',values:window.currentResultValues});
+  if(window.currentResultValues) choices.push({value:'current',label:'현재 풀이 결과',name:'현재 풀이 결과',values:window.currentResultValues});
   readProfiles().forEach(p=>choices.push({value:'saved:'+p.id,label:p.name,name:p.name,values:p.values}));
   return choices;
 }

@@ -3,37 +3,42 @@ chcp 65001 >nul
 cd /d "%~dp0"
 
 where node >nul 2>nul
-if errorlevel 1 goto nonode
+if not errorlevel 1 goto haveNode
+if exist "%ProgramW6432%\nodejs\node.exe" (
+  set "PATH=%ProgramW6432%\nodejs;%PATH%"
+  goto haveNode
+)
+if exist "%ProgramFiles%\nodejs\node.exe" (
+  set "PATH=%ProgramFiles%\nodejs;%PATH%"
+  goto haveNode
+)
+if exist "%ProgramFiles(x86)%\nodejs\node.exe" (
+  set "PATH=%ProgramFiles(x86)%\nodejs;%PATH%"
+  goto haveNode
+)
+if exist "%LocalAppData%\Programs\nodejs\node.exe" (
+  set "PATH=%LocalAppData%\Programs\nodejs;%PATH%"
+  goto haveNode
+)
+goto installNode
+
+:installNode
+echo Node.js LTS가 없어 공식 설치 파일을 내려받아 설치합니다.
+choice /C YN /M "Node.js LTS를 설치하고 프로그램을 계속 실행할까요"
+if errorlevel 2 goto installCancelled
+powershell -NoProfile -ExecutionPolicy Bypass -File "%~dp0설치_Node.js.ps1"
+if errorlevel 1 goto installFailed
+if exist "%ProgramW6432%\nodejs\node.exe" set "PATH=%ProgramW6432%\nodejs;%PATH%"
+if exist "%ProgramFiles%\nodejs\node.exe" set "PATH=%ProgramFiles%\nodejs;%PATH%"
+if exist "%ProgramFiles(x86)%\nodejs\node.exe" set "PATH=%ProgramFiles(x86)%\nodejs;%PATH%"
+where node >nul 2>nul
+if errorlevel 1 goto installFailed
 
 :haveNode
-if not exist "node_modules\kor-lunar" goto install
+if not exist "node_modules\kor-lunar" goto installDeps
 goto run
 
-:nonode
-echo.
-echo Node.js가 설치되어 있지 않습니다. 이 프로그램은 Node.js LTS가 필요합니다.
-where winget >nul 2>nul
-if errorlevel 1 goto manual
-choice /C YN /M "Node.js LTS를 지금 설치할까요 (winget 사용)"
-if errorlevel 2 goto manual
-winget install -e --id OpenJS.NodeJS.LTS --accept-package-agreements --accept-source-agreements
-if errorlevel 1 (echo Node.js 설치가 완료되지 않았습니다. & goto manual)
-if exist "%ProgramFiles%\nodejs\node.exe" set "PATH=%ProgramFiles%\nodejs;%PATH%"
-where node >nul 2>nul
-if errorlevel 1 (
-  echo Node.js 설치는 끝났지만 현재 창에서 인식하지 못합니다. 이 파일을 다시 실행해 주세요.
-  pause
-  exit /b 0
-)
-goto haveNode
-
-:manual
-echo 아래 주소에서 Node.js LTS를 설치한 뒤 이 파일을 다시 실행하세요.
-echo https://nodejs.org/ko/download
-pause
-exit /b 1
-
-:install
+:installDeps
 echo 필요한 패키지를 설치합니다. 처음 한 번만 걸립니다.
 call npm install
 if errorlevel 1 (echo npm install 실패. 인터넷 연결을 확인한 뒤 다시 실행하세요. & pause & exit /b 1)
@@ -50,9 +55,16 @@ if defined OLDPID (
   taskkill /PID %OLDPID% /F
   timeout /t 2 /nobreak >nul
 )
-set "SAJU_PORT=%PORT%"
-echo Server runs in this window. Closing this window or pressing Ctrl+C stops the server.
-start "" "http://127.0.0.1:%PORT%"
-node server.js
-echo Server stopped.
+for /f "delims=" %%n in ('where node') do if not defined NODE_EXEC set "NODE_EXEC=%%n"
+start "" "%SystemRoot%\System32\wscript.exe" //B //NoLogo "%~dp0실행하기_숨김.vbs" "%NODE_EXEC%" "%~dp0server.js" "%PORT%"
+exit /b 0
+
+:installFailed
+echo Node.js LTS 자동 설치에 실패했습니다. 인터넷 연결과 설치 권한을 확인한 뒤 다시 실행해 주세요.
+echo https://nodejs.org/ko/download
 pause
+exit /b 1
+
+:installCancelled
+echo 설치를 취소했습니다. Node.js를 설치한 뒤 다시 실행할 수 있습니다.
+exit /b 0
