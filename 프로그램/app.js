@@ -138,14 +138,42 @@ function wrapInDisclosure(element,className){
   disclosure.className=className;
   disclosure.open=true;
   const summary=document.createElement('summary');
-  summary.textContent=disclosureTitle(element);
+  summary.setAttribute('aria-label',`${disclosureTitle(element)} 접기 또는 펼치기`);
+  const title=document.createElement('span');
+  title.className='fold-title';
+  title.textContent=disclosureTitle(element);
+  const state=document.createElement('span');
+  state.className='fold-state';
+  state.setAttribute('aria-hidden','true');
+  state.textContent='접기';
+  summary.append(title,state);
+  disclosure.addEventListener('toggle',()=>{state.textContent=disclosure.open?'접기':'펼치기';});
+  if(element.id)disclosure.dataset.foldFor=element.id;
   element.before(disclosure);
   disclosure.append(summary,element);
+}
+function decorateExistingDisclosure(disclosure){
+  const summary=disclosure.querySelector(':scope > summary');
+  if(!summary||summary.querySelector('.fold-title'))return;
+  disclosure.classList.add('reading-fold');
+  const label=summary.textContent.trim();
+  summary.textContent='';
+  summary.setAttribute('aria-label',`${label} 접기 또는 펼치기`);
+  const title=document.createElement('span');
+  title.className='fold-title';
+  title.textContent=label;
+  const state=document.createElement('span');
+  state.className='fold-state';
+  state.setAttribute('aria-hidden','true');
+  state.textContent=disclosure.open?'접기':'펼치기';
+  summary.append(title,state);
+  disclosure.addEventListener('toggle',()=>{state.textContent=disclosure.open?'접기':'펼치기';});
 }
 function makeDisclosureContent(root){
   if(!root)return;
   [...root.querySelectorAll('.reading-card,.explain')].forEach(card=>wrapInDisclosure(card,'reading-fold'));
   [...root.querySelectorAll('.theme')].filter(theme=>theme.querySelector('p')).forEach(theme=>wrapInDisclosure(theme,'reading-section-fold'));
+  root.querySelectorAll('details.consistent-fold').forEach(decorateExistingDisclosure);
   root.querySelectorAll('.reading-toc a').forEach(link=>link.addEventListener('click',()=>{
     const target=document.getElementById(decodeURIComponent(link.hash.slice(1)));
     for(let node=target;node&&node!==root;node=node.parentElement){
@@ -197,8 +225,15 @@ function renderResult(data,values,{persist=true}={}){
   reading.extra=window.ExtraReading.build(data,reading);
   const readingHtml=renderReading(data,reading);
   const markdown=renderMarkdown(data,reading);
-  result.innerHTML=`<p class="notice fun-banner"><b>전통 명리의 상징을 바탕으로 한 참고 풀이입니다. 가볍게 살펴봐 주세요.</b></p><div class="result-heading"><div><div class="section-label">02 · 나의 사주</div><h2>태어난 순간의 네 기둥</h2></div><div class="result-actions"><button type="button" id="exportMarkdown" class="secondary-button">풀이를 파일로 저장 (Markdown)</button><button type="button" id="printReading" class="secondary-button no-print">인쇄·PDF로 저장</button></div></div><p class="dates">양력 ${escapeHtml(data.solar)} <span>·</span> 음력 ${escapeHtml(data.lunar)}</p>${data.warning.map(w=>`<p class="notice">${escapeHtml(w)}</p>`).join('')}${data.boundaryInfo&&data.boundaryInfo.near&&data.boundaryInfo.near.length?`<p class="notice">현재 적용: 보정 ${data.correction}분, 날짜 전환 ${data.boundary==='00'?'자정':'밤 11시'} → ${data.pillars.map(p=>p?p.hangul:'미상').join(' ')}</p>`:''}${(data.boundaryInfo&&data.boundaryInfo.alternatives||[]).map(a=>`<p class="notice">${escapeHtml(a.label)}: ${a.pillars.join(' ')}</p>`).join('')}${renderReadingToc(reading)}<div class="pillars">${cards}</div>${detail}${readingHtml}${day?`<details><summary>지장간과 십성 더 보기</summary><p>지장간은 지지에 배속하는 천간입니다. 괄호 안의 십성은 일간과의 관계입니다.</p><div class="hidden-list">${hidden}</div></details>`:''}<details><summary>글자 사이의 관계</summary><p>천간합·육합·충과 삼합·방합의 짝 또는 조합 후보를 표시합니다. 부분 조합은 후보이며, 합화나 길흉을 확정하지 않습니다. 미상인 기둥은 검사하지 않습니다.</p><div class="hidden-list">${data.relations.length?data.relations.map(r=>`<div>${r.name} · ${r.positions} (${r.characters})${r.element?` · ${r.element}`:''}${r.complete===false?` · 빠진 글자 ${r.missing.join('·')}`:''}</div>`).join(''):'확인된 관계가 없습니다.'}</div></details><details><summary>계산 기준과 한계</summary><p>절입 시각으로 연주와 월주를 정합니다. 출생 시각은 한국의 당시 표준시를 기준으로 하며, 1987~1988년 서머타임을 반영합니다. 일주와 시주는 입력한 보정 분을 표준시에서 빼 계산합니다. 30분은 근사값이며 출생지나 균시차를 자동 계산하지 않습니다.</p><p>일주는 ${data.boundary==='23'?'보정 시각의 밤 11시':'보정 시각의 자정'}를 기준으로 바뀝니다. ${data.standardTime?`당시 표준시: ${data.standardTime} · 보정된 시각: ${data.adjustedTime}${data.dst?' (서머타임 보정)':''}.`:''}</p><p>대운은 ${data.daeun?.available?'양년남·음년녀 순행 기준이며 3일=1년 환산과 년 단위 반올림을 적용한 근사치입니다.':(data.daeun?.alternatives?'성별을 고르지 않아 남성 기준과 여성 기준을 함께 표시했습니다.':'출생시각 또는 계산 기준 성별이 없어 생략했습니다.')} 용신을 포함한 종합 길흉 해석은 제공하지 않습니다.</p></details>`;
+  result.innerHTML=`<div class="notice fun-banner"><b>전통 명리의 상징을 바탕으로 한 참고 풀이입니다. 가볍게 살펴봐 주세요.</b><button type="button" id="toggleAllReading" class="global-collapse" aria-expanded="true">전체 풀이 접기</button></div><div class="result-heading"><div><div class="section-label">02 · 나의 사주</div><h2>태어난 순간의 네 기둥</h2></div><div class="result-actions"><button type="button" id="exportMarkdown" class="secondary-button">풀이를 파일로 저장 (Markdown)</button><button type="button" id="printReading" class="secondary-button no-print">인쇄·PDF로 저장</button></div></div><p class="dates">양력 ${escapeHtml(data.solar)} <span>·</span> 음력 ${escapeHtml(data.lunar)}</p>${data.warning.map(w=>`<p class="notice">${escapeHtml(w)}</p>`).join('')}${data.boundaryInfo&&data.boundaryInfo.near&&data.boundaryInfo.near.length?`<p class="notice">현재 적용: 보정 ${data.correction}분, 날짜 전환 ${data.boundary==='00'?'자정':'밤 11시'} → ${data.pillars.map(p=>p?p.hangul:'미상').join(' ')}</p>`:''}${(data.boundaryInfo&&data.boundaryInfo.alternatives||[]).map(a=>`<p class="notice">${escapeHtml(a.label)}: ${a.pillars.join(' ')}</p>`).join('')}${renderReadingToc(reading)}<div class="pillars">${cards}</div>${detail}${readingHtml}${day?`<details class="consistent-fold"><summary>지장간과 십성 더 보기</summary><p>지장간은 지지에 배속하는 천간입니다. 괄호 안의 십성은 일간과의 관계입니다.</p><div class="hidden-list">${hidden}</div></details>`:''}<details class="consistent-fold"><summary>글자 사이의 관계</summary><p>천간합·육합·충과 삼합·방합의 짝 또는 조합 후보를 표시합니다. 부분 조합은 후보이며, 합화나 길흉을 확정하지 않습니다. 미상인 기둥은 검사하지 않습니다.</p><div class="hidden-list">${data.relations.length?data.relations.map(r=>`<div>${r.name} · ${r.positions} (${r.characters})${r.element?` · ${r.element}`:''}${r.complete===false?` · 빠진 글자 ${r.missing.join('·')}`:''}</div>`).join(''):'확인된 관계가 없습니다.'}</div></details><details class="consistent-fold"><summary>계산 기준과 한계</summary><p>절입 시각으로 연주와 월주를 정합니다. 출생 시각은 한국의 당시 표준시를 기준으로 하며, 1987~1988년 서머타임을 반영합니다. 일주와 시주는 입력한 보정 분을 표준시에서 빼 계산합니다. 30분은 근사값이며 출생지나 균시차를 자동 계산하지 않습니다.</p><p>일주는 ${data.boundary==='23'?'보정 시각의 밤 11시':'보정 시각의 자정'}를 기준으로 바뀝니다. ${data.standardTime?`당시 표준시: ${data.standardTime} · 보정된 시각: ${data.adjustedTime}${data.dst?' (서머타임 보정)':''}.`:''}</p><p>대운은 ${data.daeun?.available?'양년남·음년녀 순행 기준이며 3일=1년 환산과 년 단위 반올림을 적용한 근사치입니다.':(data.daeun?.alternatives?'성별을 고르지 않아 남성 기준과 여성 기준을 함께 표시했습니다.':'출생시각 또는 계산 기준 성별이 없어 생략했습니다.')} 용신을 포함한 종합 길흉 해석은 제공하지 않습니다.</p></details>`;
   makeDisclosureContent(result);
+  result.querySelector('#toggleAllReading').addEventListener('click',event=>{
+    const button=event.currentTarget;
+    const expand=button.getAttribute('aria-expanded')!=='true';
+    result.querySelectorAll('details').forEach(disclosure=>{disclosure.open=expand;});
+    button.setAttribute('aria-expanded',String(expand));
+    button.textContent=expand?'전체 풀이 접기':'전체 풀이 펼치기';
+  });
   result.querySelector('#exportMarkdown').addEventListener('click',()=>{
     const blob=new Blob([markdown],{type:'text/markdown;charset=utf-8'});
     const url=URL.createObjectURL(blob);
