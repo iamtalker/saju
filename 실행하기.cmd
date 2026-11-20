@@ -55,8 +55,8 @@ if defined OLDPID (
   timeout /t 2 /nobreak >nul
 )
 for /f "delims=" %%n in ('where node') do if not defined NODE_EXEC set "NODE_EXEC=%%n"
-del "%APPDIR%\server.log" >nul 2>nul
-start "사주 서버" /min cmd /c ""%NODE_EXEC%" "%APPDIR%\server.js" > "%APPDIR%\server.log" 2>&1"
+echo 사주 서버를 시작합니다. 열린 "사주 서버" 창에 서버 상태가 표시됩니다.
+start "사주 서버" cmd /c ""%NODE_EXEC%" "%APPDIR%\server.js" & echo. & echo 사주 서버가 종료되었습니다. & pause"
 set "WAIT=0"
 
 :waitServer
@@ -69,12 +69,11 @@ goto waitServer
 
 :serverReady
 start "" "http://127.0.0.1:%PORT%"
-echo 사주 프로그램을 열었습니다. 사주 서버 창은 브라우저 탭을 모두 닫으면 10초 뒤 자동으로 닫힙니다.
+echo 사주 프로그램을 열었습니다. 주소: http://127.0.0.1:%PORT%
+echo 브라우저 탭을 모두 닫으면 "사주 서버" 창이 10초 뒤 서버를 끄고 종료 메시지를 보여 줍니다.
 exit /b 0
 
 :serverFailed
-echo 서버를 시작하지 못했습니다. 아래 로그를 확인하세요.
-echo 로그 파일: "%APPDIR%\server.log"
-if exist "%APPDIR%\server.log" type "%APPDIR%\server.log"
+echo 서버를 시작하지 못했습니다. "사주 서버" 창에 표시된 오류 메시지를 확인하세요.
 pause
 exit /b 1
