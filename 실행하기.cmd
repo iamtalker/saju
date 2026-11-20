@@ -30,6 +30,7 @@ if errorlevel 1 goto installFailed
 
 :haveNode
 if not exist "node_modules\kor-lunar" goto installDeps
+if not exist "node_modules\lunar-javascript" goto installDeps
 goto run
 
 :installDeps
@@ -50,8 +51,28 @@ if defined OLDPID (
   timeout /t 2 /nobreak >nul
 )
 for /f "delims=" %%n in ('where node') do if not defined NODE_EXEC set "NODE_EXEC=%%n"
+del "%APPDIR%\server.log" >nul 2>nul
 start "" "%SystemRoot%\System32\wscript.exe" //B //NoLogo "%APPDIR%\실행하기_숨김.vbs" "%NODE_EXEC%" "%APPDIR%\server.js" "%PORT%"
+set "WAIT=0"
+
+:waitServer
+powershell -NoProfile -Command "try { Invoke-WebRequest -UseBasicParsing -TimeoutSec 2 http://127.0.0.1:%PORT%/ | Out-Null; exit 0 } catch { exit 1 }" >nul 2>nul
+if not errorlevel 1 goto serverReady
+set /a WAIT+=1
+if %WAIT% GEQ 20 goto serverFailed
+ping -n 2 127.0.0.1 >nul
+goto waitServer
+
+:serverReady
+start "" "http://127.0.0.1:%PORT%"
 exit /b 0
+
+:serverFailed
+echo 서버를 시작하지 못했습니다. 아래 로그를 확인하세요.
+echo 로그 파일: "%APPDIR%\server.log"
+if exist "%APPDIR%\server.log" type "%APPDIR%\server.log"
+pause
+exit /b 1
 
 :installFailed
 echo Node.js LTS 자동 설치에 실패했습니다. 인터넷 연결과 설치 권한을 확인한 뒤 다시 실행해 주세요.
