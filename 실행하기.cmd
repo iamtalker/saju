@@ -10,22 +10,10 @@ cd /d "%APPDIR%"
 
 where node >nul 2>nul
 if not errorlevel 1 goto haveNode
-if exist "%ProgramW6432%\nodejs\node.exe" (
-  set "PATH=%ProgramW6432%\nodejs;%PATH%"
-  goto haveNode
-)
-if exist "%ProgramFiles%\nodejs\node.exe" (
-  set "PATH=%ProgramFiles%\nodejs;%PATH%"
-  goto haveNode
-)
-if exist "%ProgramFiles(x86)%\nodejs\node.exe" (
-  set "PATH=%ProgramFiles(x86)%\nodejs;%PATH%"
-  goto haveNode
-)
-if exist "%LocalAppData%\Programs\nodejs\node.exe" (
-  set "PATH=%LocalAppData%\Programs\nodejs;%PATH%"
-  goto haveNode
-)
+if exist "%ProgramW6432%\nodejs\node.exe" set "PATH=%ProgramW6432%\nodejs;%PATH%" & goto haveNode
+if exist "%ProgramFiles%\nodejs\node.exe" set "PATH=%ProgramFiles%\nodejs;%PATH%" & goto haveNode
+if exist "%ProgramFiles(x86)%\nodejs\node.exe" set "PATH=%ProgramFiles(x86)%\nodejs;%PATH%" & goto haveNode
+if exist "%LocalAppData%\Programs\nodejs\node.exe" set "PATH=%LocalAppData%\Programs\nodejs;%PATH%" & goto haveNode
 goto installNode
 
 :installNode
