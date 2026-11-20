@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="server-run-id" content="__SERVER_RUN_ID__">
+  <title>나의 사주 살펴보기</title>
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+<main>
+  <nav class="top-nav" aria-label="사이트 메뉴">
+    <a href="https://bookk.co.kr/bookStore/6af3769e04f230844ed9303c" target="_blank" rel="noopener noreferrer">책 소개</a>
+  </nav>
+  <header>
+    <span class="eyebrow">사주를 처음 만나는 시간</span>
+    <h1>나의 사주 살펴보기 <small class="app-version">v__APP_VERSION__</small></h1>
+    <p>태어난 순간의 네 기둥을 함께 살펴보세요.<br>처음 보는 글자도 차근차근 풀어 드립니다.</p>
+  </header>
+  <section id="savedProfiles" class="panel saved-profiles" aria-live="polite" aria-label="저장한 사주"></section>
+  <div class="layout">
+    <section id="result" class="panel result" aria-live="polite">
+      <div class="empty">
+        <div class="seal">命</div>
+        <h2>나만의 네 기둥</h2>
+        <p>사주 목록에서 불러오면<br>여기에 네 기둥과 풀이가 펼쳐집니다.</p>
+        <div class="divider"></div>
+        <small>사주는 태어난 순간의 여덟 글자를<br>살펴보는 전통 상징 체계입니다.</small>
+      </div>
+    </section>
+    <section id="compat" class="panel compat" aria-live="polite" aria-label="궁합 보기"></section>
+  </div>
+  <footer>사주 풀이는 전통 명리의 상징을 바탕으로 한 참고 자료입니다. 가볍게 살펴봐 주세요.<br>한국 음력: kor-lunar · 절기 계산: lunar-javascript · 출생시간 보정은 직접 설정</footer>
+</main>
+<script src="/reading.js"></script>
+<script src="/profile.js"></script>
+<script src="/deep-reading.js"></script>
+<script src="/compat-reading.js"></script>
+<script src="/fun-reading.js"></script>
+<script src="/extra-reading.js"></script>
+<script src="/app.js"></script>
+</body>
+</html>

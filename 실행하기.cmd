@@ -1,6 +1,12 @@
 @echo off
 chcp 65001 >nul
-cd /d "%~dp0"
+set "APPDIR=%~dp0프로그램"
+if not exist "%APPDIR%\server.js" (
+  echo 프로그램 폴더를 찾을 수 없습니다: "%APPDIR%"
+  pause
+  exit /b 1
+)
+cd /d "%APPDIR%"
 
 where node >nul 2>nul
 if not errorlevel 1 goto haveNode
@@ -26,7 +32,7 @@ goto installNode
 echo Node.js LTS가 없어 공식 설치 파일을 내려받아 설치합니다.
 choice /C YN /M "Node.js LTS를 설치하고 프로그램을 계속 실행할까요"
 if errorlevel 2 goto installCancelled
-powershell -NoProfile -ExecutionPolicy Bypass -File "%~dp0설치_Node.js.ps1"
+powershell -NoProfile -ExecutionPolicy Bypass -File "%APPDIR%\설치_Node.js.ps1"
 if errorlevel 1 goto installFailed
 if exist "%ProgramW6432%\nodejs\node.exe" set "PATH=%ProgramW6432%\nodejs;%PATH%"
 if exist "%ProgramFiles%\nodejs\node.exe" set "PATH=%ProgramFiles%\nodejs;%PATH%"
@@ -56,7 +62,7 @@ if defined OLDPID (
   timeout /t 2 /nobreak >nul
 )
 for /f "delims=" %%n in ('where node') do if not defined NODE_EXEC set "NODE_EXEC=%%n"
-start "" "%SystemRoot%\System32\wscript.exe" //B //NoLogo "%~dp0실행하기_숨김.vbs" "%NODE_EXEC%" "%~dp0server.js" "%PORT%"
+start "" "%SystemRoot%\System32\wscript.exe" //B //NoLogo "%APPDIR%\실행하기_숨김.vbs" "%NODE_EXEC%" "%APPDIR%\server.js" "%PORT%"
 exit /b 0
 
 :installFailed
